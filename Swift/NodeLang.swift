@@ -169,38 +169,65 @@ struct Node{
                 else if (lhs as? String != nil) && (rhs as? String != nil){return StringType.Logic_Is_Not_Equal(lhs:lhs as! String, rhs:rhs as! String)}
                 //Returns NullType
                 return NullType()
-            // case .Logic_Bigger:
-            //     //Gets the values of both children
-            //     let lhs = self.children[0].execute(process: process) as! Float
-            //     let rhs = self.children[1].execute(process: process) as! Float
-            //     return lhs > rhs
-            // case .Logic_Bigger_Equal:
-            //     //Gets the values of both children
-            //     let lhs = self.children[0].execute(process: process) as! Float
-            //     let rhs = self.children[1].execute(process: process) as! Float
-            //     return lhs >= rhs
-            // case .Logic_Lesser:
-            //     //Gets the values of both children
-            //     let lhs = self.children[0].execute(process: process) as! Float
-            //     let rhs = self.children[1].execute(process: process) as! Float
-            //     return lhs < rhs
-            // case .Logic_Lesser_Equal:
-            //     //Gets the values of both children
-            //     let lhs = self.children[0].execute(process: process) as! Float
-            //     let rhs = self.children[1].execute(process: process) as! Float
-            //     return lhs <= rhs
-            // case .Logic_And:
-            //     //Gets the values of both children
-            //     let lhs = self.children[0].execute(process: process) as! Bool
-            //     let rhs = self.children[1].execute(process: process) as! Bool
-            //     return lhs && rhs
-            // case .Logic_Or:
-            //     //Gets the values of both children
-            //     let lhs = self.children[0].execute(process: process) as! Bool
-            //     let rhs = self.children[1].execute(process: process) as! Bool
-            //     return lhs || rhs
-            // case .Logic_Not:
-                // return !(self.children[0].execute(process: process) as! Bool)
+            case .Logic_Bigger:
+                //Extracts the values
+                let lhs = self.children[0].execute(process: process).value
+                let rhs = self.children[1].execute(process: process).value
+                //Calls the logic bigger operator
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Bigger(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Bigger(lhs:lhs as! Float, rhs:rhs as! Float)}
+                //Returns NullType
+                return NullType()
+            case .Logic_Bigger_Equal:
+                //Extracts the values
+                let lhs = self.children[0].execute(process: process).value
+                let rhs = self.children[1].execute(process: process).value
+                //Calls the logic bigger equal operator
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Bigger_Equal(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Bigger_Equal(lhs:lhs as! Float, rhs:rhs as! Float)}
+                //Returns NullType
+                return NullType()
+            case .Logic_Lesser:
+                //Extracts the values
+                let lhs = self.children[0].execute(process: process).value
+                let rhs = self.children[1].execute(process: process).value
+                //Calls the logic lesser operator
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Lesser(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Lesser(lhs:lhs as! Float, rhs:rhs as! Float)}
+                //Returns NullType
+                return NullType()
+            case .Logic_Lesser_Equal:
+                //Extracts the values
+                let lhs = self.children[0].execute(process: process).value
+                let rhs = self.children[1].execute(process: process).value
+                //Calls the logic lesser equal operator
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Lesser_Equal(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Lesser_Equal(lhs:lhs as! Float, rhs:rhs as! Float)}
+                //Returns NullType
+                return NullType()
+            case .Logic_And:
+                //Extracts the values
+                let lhs = self.children[0].execute(process: process).value
+                let rhs = self.children[1].execute(process: process).value
+                //Calls the logic and operator
+                if (lhs as? Bool != nil) && (rhs as? Bool != nil){return BoolType.Logic_And(lhs:lhs as! Bool, rhs:rhs as! Bool)}
+                //Returns NullType
+                return NullType()
+            case .Logic_Or:
+                //Extracts the values
+                let lhs = self.children[0].execute(process: process).value
+                let rhs = self.children[1].execute(process: process).value
+                //Calls the logic or operator
+                if (lhs as? Bool != nil) && (rhs as? Bool != nil){return BoolType.Logic_Or(lhs:lhs as! Bool, rhs:rhs as! Bool)}
+                //Returns NullType
+                return NullType()
+            case .Logic_Not:
+                //Extracts the values
+                let lhs = self.children[0].execute(process: process).value
+                //Calls the logic not operator
+                if (lhs as? Bool != nil) && (rhs as? Bool != nil){return IntType.Logic_Not(lhs:lhs as! Int)}
+                //Returns NullType
+                return NullType()
             default: break
         }
         return StringType(value:"")

@@ -30,6 +30,10 @@ struct IntType:VarType{
     //------Logical Operator Overloading------
     static func Logic_Is_Equal(lhs:Int, rhs:Int) -> BoolType{return BoolType(value: lhs == rhs)}
     static func Logic_Is_Not_Equal(lhs:Int, rhs:Int) -> BoolType{return BoolType(value: lhs != rhs)}
+    static func Logic_Is_Bigger(lhs:Int, rhs:Int) -> BoolType{return BoolType(value: lhs > rhs)}
+    static func Logic_Is_Bigger_Equal(lhs:Int, rhs:Int) -> BoolType{return BoolType(value: lhs >= rhs)}
+    static func Logic_Is_Lesser(lhs:Int, rhs:Int) -> BoolType{return BoolType(value: lhs < rhs)}
+    static func Logic_Is_Lesser_Equal(lhs:Int, rhs:Int) -> BoolType{return BoolType(value: lhs <= rhs)}
     //------Procedures/Functions------
     //Produces a string representation
     //Returns:  -A dump -String
@@ -46,6 +50,10 @@ struct FloatType:VarType{
     //------Logical Operator Overloading------
     static func Logic_Is_Equal(lhs:Float, rhs:Float) -> BoolType{return BoolType(value: lhs == rhs)}
     static func Logic_Is_Not_Equal(lhs:Float, rhs:Float) -> BoolType{return BoolType(value: lhs != rhs)}
+    static func Logic_Is_Bigger(lhs:Float, rhs:Float) -> BoolType{return BoolType(value: lhs > rhs)}
+    static func Logic_Is_Bigger_Equal(lhs:Float, rhs:Float) -> BoolType{return BoolType(value: lhs >= rhs)}
+    static func Logic_Is_Lesser(lhs:Float, rhs:Float) -> BoolType{return BoolType(value: lhs < rhs)}
+    static func Logic_Is_Lesser_Equal(lhs:Float, rhs:Float) -> BoolType{return BoolType(value: lhs <= rhs)}
     //------Procedures/Functions------
     //Produces a string representation
     //Returns:  -A dump -String
@@ -57,6 +65,9 @@ struct BoolType:VarType{
     //------Logical Operator Overloading------
     static func Logic_Is_Equal(lhs:Bool, rhs:Bool) -> BoolType{return BoolType(value: lhs == rhs)}
     static func Logic_Is_Not_Equal(lhs:Bool, rhs:Bool) -> BoolType{return BoolType(value: lhs != rhs)}
+    static func Logic_And(lhs:Bool, rhs:Bool) -> BoolType{return BoolType(value: lhs && rhs)}
+    static func Logic_Or(lhs:Bool, rhs:Bool) -> BoolType{return BoolType(value: lhs || rhs)}
+    static func Logic_Not(lhs:Bool) -> BoolType{return BoolType(value: !lhs)}
     //------Procedures/Functions------
     //Produces a string representation
     //Returns:  -A dump -String
