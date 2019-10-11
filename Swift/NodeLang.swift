@@ -3,7 +3,7 @@ enum NodeType{
     //Vars
     case CreateVar              //Children - Name, GetVar(Optional)                 Purpose - Creates a variable in a given scope(getVar), default uses the stack scope
     case GetVar                 //Children - Name, GetVar(Optional)                 Purpose - Gets the variable from the given scope(getVar), default uses the stack scope
-    case DeleteVar                 //Children - Name, GetVar(Optional)                 Purpose - Deletes the variable from the given scope(getVar), default uses the stack scope
+    case DeleteVar                 //Children - Name, GetVar(Optional)              Purpose - Deletes the variable from the given scope(getVar), default uses the stack scope
     case Text                   //Operand  - Text
     case Number                 //Operand  - Number
     case Boolean                //Operand  - Boolean
@@ -25,14 +25,13 @@ enum NodeType{
     //Conditionals
     case If                     //Children - Condition, Execute(True), Execute(False)
     //Loops
-    case For
-    case While
-    case RepeatExecute          //Children - Condition, Execute             //PROPOSED LOOP CODE
-    case StopExecute            //Children - Condition, Execute
-    case JumpTo
-    case SubRoutine
-    case Label
-    case Recall
+    case JumpTo                 //Children - Label                                  Purpose - Permenantly jumps to a (parent) execute block with a given label
+    case SubRoutine             //Children - Label                                  Purpose - Temporarily jumps to a (parent) execute block with a given label
+    case Label                  //Children - Text                                   Purpose - Defines a location for a jump
+    case Recall                 //                                                  Purpose - Ends the current subroutine
+    //Namespaces
+    case Namespace              //Children - Label, [Execute]                       Purpose - Sets up a namespace for execute blocks
+    case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo
     //Other
     case Assign                 //Children - Name, GetVar(Optional), Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
     case Execute                //Children - Any                                    Purpose - Execute a list of nodes
@@ -230,7 +229,7 @@ struct Node{
                 return NullType()
             default: break
         }
-        return StringType(value:"")
+        return NullType()
     }
 }
 
