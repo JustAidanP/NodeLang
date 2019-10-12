@@ -1,9 +1,9 @@
 //------Enumerators------
 enum NodeType{
     //Vars
-    case CreateVar              //Children - Name, GetVar(Optional)                 Purpose - Creates a variable in a given scope(getVar), default uses the stack scope
-    case GetVar                 //Children - Name, GetVar(Optional)                 Purpose - Gets the variable from the given scope(getVar), default uses the stack scope
-    case DeleteVar                 //Children - Name, GetVar(Optional)              Purpose - Deletes the variable from the given scope(getVar), default uses the stack scope
+    case CreateVar              //Children - GetVar(Optional), Name                 Purpose - Creates a variable in a given scope(getVar), default uses the stack scope
+    case GetVar                 //Children - GetVar(Optional), Name                 Purpose - Gets the variable from the given scope(getVar), default uses the stack scope
+    case DeleteVar              //Children - GetVar(Optional), Name                 Purpose - Deletes the variable from the given scope(getVar), default uses the stack scope
     case Text                   //Operand  - Text
     case Number                 //Operand  - Number
     case Boolean                //Operand  - Boolean
@@ -33,9 +33,8 @@ enum NodeType{
     case Namespace              //Children - Label, [Execute]                       Purpose - Sets up a namespace for execute blocks
     case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo
     //Other
-    case Assign                 //Children - Name, GetVar(Optional), Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
+    case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
     case Execute                //Children - Any                                    Purpose - Execute a list of nodes
-    case Namespace              //Children - Label, Execute                         Purpose - Stores subprocesses
 }
 
 //------Structures------
@@ -44,7 +43,7 @@ enum NodeType{
 struct Node{
     //------Variables------
     //Stores an association of all node types to an index
-    static let nodeTypes:[NodeType] = [.CreateVar,.GetVar,.DeleteVar,.Text,.Number,.Boolean,.Oper_Add,.Oper_Sub,.Oper_Div,.Oper_Mult,.Logic_Is_Equal,.Logic_Is_Not_Equal,.Logic_Bigger,.Logic_Bigger_Equal,.Logic_Lesser,.Logic_Lesser_Equal,.Logic_And,.Logic_Or,.Logic_Not,.If,.While,.For,.Assign,.Execute]
+    static let nodeTypes:[NodeType] = [.CreateVar,.GetVar,.DeleteVar,.Text,.Number,.Boolean,.Oper_Add,.Oper_Sub,.Oper_Div,.Oper_Mult,.Logic_Is_Equal,.Logic_Is_Not_Equal,.Logic_Bigger,.Logic_Bigger_Equal,.Logic_Lesser,.Logic_Lesser_Equal,.Logic_And,.Logic_Or,.Logic_Not,.If,.JumpTo,.SubRoutine,.Assign,.Execute]
     //Defines the node's type
     var type:NodeType
     //Adds a single piece of extra information, such as a name
@@ -53,6 +52,22 @@ struct Node{
     var children:[Node] = [Node]()
 
     //------Procedures/Functions------
+    //Preprocesses the node, i.e. pre-executes its children and returns whether pre-processing has finished
+    //Arguments:    -The process                        -Ref Process
+    //Returns:      -Whether processing has finished    -Bool
+    func clockPrerocess(process:_Process)->Bool{
+        //Makes sure that only the first child of an if node is ran
+        if self.type == .If && process.indexStack.last! >= 1{return true}
+        //Returns true if there are no children or preprocessing has finished
+        if self.children.count == 0 || process.indexStack.last! >= self.children.count{return true}
+        //Adds the child to the nodeStack of the process
+        process.nodeStack.append(self.children[process.indexStack.last!])
+        //Adds one to the child index
+        process.indexStack[process.indexStack.count - 1] += 1
+        //Adds an index of zero to the indexStack for the next node
+        process.indexStack.append(0)
+        return false
+    }
     //Runs the Node using the current process
     //Arguments:    -A process      -Process
     //Returns:      -An evaluation  -Any
@@ -173,8 +188,8 @@ struct Node{
                 let lhs = self.children[0].execute(process: process).value
                 let rhs = self.children[1].execute(process: process).value
                 //Calls the logic bigger operator
-                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Bigger(lhs:lhs as! Int, rhs:rhs as! Int)}
-                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Bigger(lhs:lhs as! Float, rhs:rhs as! Float)}
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Is_Bigger(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Is_Bigger(lhs:lhs as! Float, rhs:rhs as! Float)}
                 //Returns NullType
                 return NullType()
             case .Logic_Bigger_Equal:
@@ -182,8 +197,8 @@ struct Node{
                 let lhs = self.children[0].execute(process: process).value
                 let rhs = self.children[1].execute(process: process).value
                 //Calls the logic bigger equal operator
-                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Bigger_Equal(lhs:lhs as! Int, rhs:rhs as! Int)}
-                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Bigger_Equal(lhs:lhs as! Float, rhs:rhs as! Float)}
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Is_Bigger_Equal(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Is_Bigger_Equal(lhs:lhs as! Float, rhs:rhs as! Float)}
                 //Returns NullType
                 return NullType()
             case .Logic_Lesser:
@@ -191,8 +206,8 @@ struct Node{
                 let lhs = self.children[0].execute(process: process).value
                 let rhs = self.children[1].execute(process: process).value
                 //Calls the logic lesser operator
-                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Lesser(lhs:lhs as! Int, rhs:rhs as! Int)}
-                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Lesser(lhs:lhs as! Float, rhs:rhs as! Float)}
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Is_Lesser(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Is_Lesser(lhs:lhs as! Float, rhs:rhs as! Float)}
                 //Returns NullType
                 return NullType()
             case .Logic_Lesser_Equal:
@@ -200,8 +215,8 @@ struct Node{
                 let lhs = self.children[0].execute(process: process).value
                 let rhs = self.children[1].execute(process: process).value
                 //Calls the logic lesser equal operator
-                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Lesser_Equal(lhs:lhs as! Int, rhs:rhs as! Int)}
-                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Lesser_Equal(lhs:lhs as! Float, rhs:rhs as! Float)}
+                if (lhs as? Int != nil) && (rhs as? Int != nil){return IntType.Logic_Is_Lesser_Equal(lhs:lhs as! Int, rhs:rhs as! Int)}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){return FloatType.Logic_Is_Lesser_Equal(lhs:lhs as! Float, rhs:rhs as! Float)}
                 //Returns NullType
                 return NullType()
             case .Logic_And:
@@ -224,7 +239,7 @@ struct Node{
                 //Extracts the values
                 let lhs = self.children[0].execute(process: process).value
                 //Calls the logic not operator
-                if (lhs as? Bool != nil) && (rhs as? Bool != nil){return IntType.Logic_Not(lhs:lhs as! Int)}
+                if (lhs as? Bool != nil){return BoolType.Logic_Not(lhs:lhs as! Bool)}
                 //Returns NullType
                 return NullType()
             default: break
@@ -274,4 +289,282 @@ class Process{
 
         print(self.scopeStack.stack.last!.getValue(name:"output").value)
     }
+}
+
+//Handles the processing of an execution block
+class _Process{
+    //------Variables------
+    //Stores a reference to the process manager
+    var processManager:ProcessManager
+    //Defines whether the process should be updating
+    var shouldClock:Bool = true
+    //Defines whether the process should be killed by the process manager
+    var shouldKill:Bool = false
+    //Stores the node tree
+    var nodeTree:Node = Node(type:.Execute)
+    //Stores the node stack
+    var nodeStack:[Node] = [Node]()
+    //Stores the index stack, index's the child of the current node
+    var indexStack:[Int] = [0, 0]
+    //Stores the register stack
+    var registerStack:[VarType] = [VarType]()
+
+    //------Initialiser------
+    //Arguments:    -The process manager it belongs to  -ProcessManager
+    //              -The node tree                      -Node
+    init(_processManager:ProcessManager, _nodeTree:Node){
+        self.processManager = _processManager
+        self.nodeTree = _nodeTree
+
+        //Adds the nodeTree as the first node in nodeStack
+        nodeStack = [nodeTree]
+    }
+
+    //------Procedures/Functions------
+    //Clocks the process, provides an update outlet
+    func clock(){
+        //Extracts the currentNode
+        let currentNode = nodeStack.last!
+        //Clocks the node preprocessing and stops clocking if it hasn't finished
+        if !currentNode.clockPrerocess(process: self){return}
+        //Removes the indexing for the child of the node
+        indexStack.removeLast()
+
+        //Executes the node
+        execute(node:currentNode)
+
+        //Removes the node from the node stack
+        nodeStack.removeLast()
+        //Finishes the process if the nodes have finished running, this happens when the length of nodeStack is none
+        if nodeStack.count == 0{shouldKill = true}
+
+        print(registerStack)
+    }
+
+    //Executes a node
+    //Arguments:    -The node   -Node
+    func execute(node:Node){
+        //Switches through the Node's type
+        switch node.type{
+            //Primitives
+            case .Text: registerStack.append(StringType(value:node.operand))
+            case .Number: registerStack.append((node.operand as? Int != nil) ? IntType(value:node.operand) : FloatType(value:node.operand as! Float)) //Converts the number to FloatType
+            case .Boolean: registerStack.append(BoolType(value:node.operand))
+            //Handles variables
+            case .CreateVar:
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 2{
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Creates a variable with the name of the child
+                varScope.declareVar(name: name)
+            case .DeleteVar:
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 2{
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Deletes the variable with the name
+                varScope.deleteVar(name: name)
+            case .GetVar:
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 2{
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Adds the value of the variable to the registerStack
+                registerStack.append(varScope.getValue(name: name))
+            case .Assign:
+                //Extracts the var scope
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the value
+                let value = registerStack.last!; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 3{
+                    //Checks if the value in the register is a variable scope
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Assigns the second child's value to the first variable
+                varScope.assignValue(name: name, value: value)
+            //Handles conditional branching
+            case .If:
+                //------Pushes the branch node onto the nodeStack, increments the child index and adds a new index for the branch node
+                //Sets the child index to be past all the children
+                indexStack[indexStack.count - 1] = node.children.count + 1
+
+                //Evaluates the condition
+                let condition = registerStack.last!.value as! Bool; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Adds an index of zero to the indexStack for the branch node
+                indexStack.append(0)
+                //Adds the corresponding branch to the nodeStack
+                if condition{nodeStack.append(node.children[1])}else{nodeStack.append(node.children[0])}
+            //Operators
+            case .Oper_Add:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the addition operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.operator_add(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.operator_add(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            case .Oper_Sub:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the subtraction operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.operator_sub(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.operator_sub(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            case .Oper_Mult:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the multiplication operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.operator_mult(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.operator_mult(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            case .Oper_Div:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the division operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.operator_div(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.operator_div(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            //Logical Operators
+            case .Logic_Is_Equal:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic is operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.Logic_Is_Equal(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Equal(lhs:lhs as! Float, rhs:rhs as! Float))}
+                else if (lhs as? Bool != nil) && (rhs as? Bool != nil){registerStack.append(BoolType.Logic_Is_Equal(lhs:lhs as! Bool, rhs:rhs as! Bool))}
+                else if (lhs as? String != nil) && (rhs as? String != nil){registerStack.append(StringType.Logic_Is_Equal(lhs:lhs as! String, rhs:rhs as! String))}
+                //Exits
+                return
+            case .Logic_Is_Not_Equal:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic is not operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.Logic_Is_Not_Equal(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Not_Equal(lhs:lhs as! Float, rhs:rhs as! Float))}
+                else if (lhs as? Bool != nil) && (rhs as? Bool != nil){registerStack.append(BoolType.Logic_Is_Not_Equal(lhs:lhs as! Bool, rhs:rhs as! Bool))}
+                else if (lhs as? String != nil) && (rhs as? String != nil){registerStack.append(StringType.Logic_Is_Not_Equal(lhs:lhs as! String, rhs:rhs as! String))}
+                //Exits
+                return
+            case .Logic_Bigger:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic bigger operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.Logic_Is_Bigger(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Bigger(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            case .Logic_Bigger_Equal:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic bigger equal operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.Logic_Is_Bigger_Equal(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Bigger_Equal(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            case .Logic_Lesser:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic lesser operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.Logic_Is_Lesser(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Lesser(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            case .Logic_Lesser_Equal:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic lesser equal operator and appends the result to the register stack
+                if (lhs as? Int != nil) && (rhs as? Int != nil){registerStack.append(IntType.Logic_Is_Lesser_Equal(lhs:lhs as! Int, rhs:rhs as! Int))}
+                else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Lesser_Equal(lhs:lhs as! Float, rhs:rhs as! Float))}
+                //Exits
+                return
+            case .Logic_And:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic and operator and appends the result to the register stack
+                if (lhs as? Bool != nil) && (rhs as? Bool != nil){registerStack.append(BoolType.Logic_And(lhs:lhs as! Bool, rhs:rhs as! Bool))}
+                //Exits
+                return
+            case .Logic_Or:
+                //Extracts the values
+                let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic or operator and appends the result to the register stack
+                if (lhs as? Bool != nil) && (rhs as? Bool != nil){registerStack.append(BoolType.Logic_Or(lhs:lhs as! Bool, rhs:rhs as! Bool))}
+                //Exits
+                return
+            case .Logic_Not:
+                //Extracts the values
+                let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Calls the logic not operator
+                if (lhs as? Bool != nil){registerStack.append(BoolType.Logic_Not(lhs:lhs as! Bool))}
+                //Exits
+                return
+            default: break
+        }
+        return
+    }
+}
+//This handles management of processes
+class ProcessManager{
+    //------Variables------
+    //Stores the scope stack
+    var scopeStack:ScopeStack
+    //Stores all processes to be executed
+    var processes:[_Process] = [_Process]()
+    //------Initialiser------
+    init(){
+        //Creates the scope stack
+        self.scopeStack = ScopeStack()
+        //Pushes a variable scope to the scopeStack
+        self.scopeStack.push(scope:VariableScope())
+    }
+    //------Procedures/Functions------
+    //Runs all processes indefinately
+    func run(){
+        while true{
+            //Runs every process
+            for i in 0..<processes.count{
+                let process = processes[i]
+                if process.shouldKill{processes.remove(at:i)}
+                else if process.shouldClock{process.clock(); continue}
+                return
+            }
+        }
+    }
+    //Runs for x number of clock cycles, a single clock sends one clock pulse to every process
+    //Arguments:    -No. of clocks  -Int
+    func runClocks(clocks:Int){}
+    //Stops execution
+    func stop(){}
 }
