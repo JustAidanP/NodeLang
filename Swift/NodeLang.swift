@@ -333,17 +333,16 @@ class _Process{
         //Executes the node
         execute(node:currentNode)
 
-        //Removes the node from the node stack
-        nodeStack.removeLast()
         //Finishes the process if the nodes have finished running, this happens when the length of nodeStack is none
         if nodeStack.count == 0{shouldKill = true}
-
-        print(registerStack)
     }
 
     //Executes a node
     //Arguments:    -The node   -Node
     func execute(node:Node){
+        //Removes the node from the node stack
+        nodeStack.removeLast()
+
         //Switches through the Node's type
         switch node.type{
             //Primitives
@@ -410,7 +409,7 @@ class _Process{
                 //Adds an index of zero to the indexStack for the branch node
                 indexStack.append(0)
                 //Adds the corresponding branch to the nodeStack
-                if condition{nodeStack.append(node.children[1])}else{nodeStack.append(node.children[0])}
+                if condition{nodeStack.append(node.children[2])}else{nodeStack.append(node.children[1])}
             //Operators
             case .Oper_Add:
                 //Extracts the values
