@@ -1,11 +1,22 @@
 //------Enumerators------
+//------The type should be able to be stored in a byte with the first 4 bits representing the section and the last 4 representing the specific type
 enum NodeType{
+    //--Proposal--
+    case GetVal
+    case GetRef                 //Or just AssignRef and provide the name of the var as the first children however this can't do other scoped vars
+    case DeleteVal
+    case DeleteRef
+    case AssignVal
+    case AssignRef              //Or LinkRef
     //Vars
     case CreateVar              //Children - GetVar(Optional), Name                 Purpose - Creates a variable in a given scope(getVar), default uses the stack scope
     case GetVar                 //Children - GetVar(Optional), Name                 Purpose - Gets the variable from the given scope(getVar), default uses the stack scope
     case DeleteVar              //Children - GetVar(Optional), Name                 Purpose - Deletes the variable from the given scope(getVar), default uses the stack scope
+    //Primitives
     case Text                   //Operand  - Text
-    case Number                 //Operand  - Number
+    case Number                 //Operand  - Number                               --Depreciated
+    case Real_Int               //Operand  - Int
+    case Real_Float             //Operand  - Float
     case Boolean                //Operand  - Boolean
     //Operators
     case Oper_Add               //Children - Expression, Expression
@@ -25,22 +36,22 @@ enum NodeType{
     //Conditionals
     case If                     //Children - Condition, Execute(True), Execute(False)
     //Loops
-    case JumpTo                 //Children - Label                                  Purpose - Permenantly jumps to a (parent) execute block with a given label
-    case SubRoutine             //Children - Label                                  Purpose - Temporarily jumps to a (parent) execute block with a given label
-    case Label                  //Children - Text                                   Purpose - Defines a location for a jump
+    case JumpTo                 //Children - RefNamespace, Label                    Purpose - Permenantly jumps to a (parent) execute block with a given label
+    case SubRoutine             //Children - RefNamespace, Label                    Purpose - Temporarily jumps to a (parent) execute block with a given label
+    case Label                  //Children - Text                                   Purpose - Defines a location for a jump                                                                 Entry - Has none as it performs no edits to the registers
     case Recall                 //                                                  Purpose - Ends the current subroutine
     //Namespaces
     case Namespace              //Children - Label, [Execute]                       Purpose - Sets up a namespace for execute blocks
-    case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo
+    case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo                                               Entry - Has none as it performs no edits to the registers
     //Other
     case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
-    case Execute                //Children - Any                                    Purpose - Execute a list of nodes
+    case Execute                //Children - Any                                    Purpose - Execute a list of nodes                                                                       Entry - Has none as it performs no edits to the registers
 }
 
-//------Structures------
-//Defines a Node
+//------Classes------
+//Defines a Node as a class to make it a reference type
 //Each node has a type and a child
-struct Node{
+class Node{
     //------Variables------
     //Stores an association of all node types to an index
     static let nodeTypes:[NodeType] = [.CreateVar,.GetVar,.DeleteVar,.Text,.Number,.Boolean,.Oper_Add,.Oper_Sub,.Oper_Div,.Oper_Mult,.Logic_Is_Equal,.Logic_Is_Not_Equal,.Logic_Bigger,.Logic_Bigger_Equal,.Logic_Lesser,.Logic_Lesser_Equal,.Logic_And,.Logic_Or,.Logic_Not,.If,.JumpTo,.SubRoutine,.Assign,.Execute]
@@ -50,6 +61,16 @@ struct Node{
     var operand:Any = ""
     //Stores the Node's children, this has to be a specific order
     var children:[Node] = [Node]()
+
+    //------Initialiser------
+    //Arguments:    -The type       -NodeType
+    //              -The operand    -Any
+    //              -The children   -[Node ref]
+    init(type:NodeType, operand:Any = "", children:[Node] = [Node]()){
+        self.type = type
+        self.operand = operand
+        self.children = children
+    }
 
     //------Procedures/Functions------
     //Preprocesses the node, i.e. pre-executes its children and returns whether pre-processing has finished
@@ -248,7 +269,6 @@ struct Node{
     }
 }
 
-//------Classes------
 //Defines a Process object
 //Handles execution
 class Process{
@@ -296,6 +316,8 @@ class _Process{
     //------Variables------
     //Stores a reference to the process manager
     var processManager:ProcessManager
+    //Stores the parent of the process(if it has one)
+    var processParent:_Process? = nil
     //Defines whether the process should be updating
     var shouldClock:Bool = true
     //Defines whether the process should be killed by the process manager
@@ -310,10 +332,12 @@ class _Process{
     var registerStack:[VarType] = [VarType]()
 
     //------Initialiser------
-    //Arguments:    -The process manager it belongs to  -ProcessManager
+    //Arguments:    -The process manager it belongs to  -ProcessManager ref
+    //              -The process parent                 -Process ref            -Nil
     //              -The node tree                      -Node
-    init(_processManager:ProcessManager, _nodeTree:Node){
+    init(_processManager:ProcessManager, _processParent:_Process? = nil, _nodeTree:Node){
         self.processManager = _processManager
+        self.processParent = _processParent
         self.nodeTree = _nodeTree
 
         //Adds the nodeTree as the first node in nodeStack
@@ -334,7 +358,13 @@ class _Process{
         execute(node:currentNode)
 
         //Finishes the process if the nodes have finished running, this happens when the length of nodeStack is none
-        if nodeStack.count == 0{shouldKill = true}
+        if nodeStack.count == 0{
+            shouldKill = true
+            //Recalls the process if it has a parent process
+            guard let parent = self.processParent else{return}
+            //Sets the parent to run again              //------Change for Async
+            parent.shouldClock = true
+        }
     }
 
     //Executes a node
@@ -529,6 +559,14 @@ class _Process{
                 if (lhs as? Bool != nil){registerStack.append(BoolType.Logic_Not(lhs:lhs as! Bool))}
                 //Exits
                 return
+            //Jumps
+            case .Recall:
+                //Sets the current process to end
+                shouldKill = true
+                //If the process has a process, it sets it to clock
+                if let parent = self.processParent{parent.shouldClock = true}           //------Change for Async
+                //Exits
+                return
             default: break
         }
         return
@@ -563,7 +601,17 @@ class ProcessManager{
     }
     //Runs for x number of clock cycles, a single clock sends one clock pulse to every process
     //Arguments:    -No. of clocks  -Int
-    func runClocks(clocks:Int){}
+    func runClocks(clocks:Int){
+        for _ in 0..<clocks{
+            //Runs every process
+            for i in 0..<processes.count{
+                let process = processes[i]
+                if process.shouldKill{processes.remove(at:i)}
+                else if process.shouldClock{process.clock(); continue}
+                return
+            }
+        }
+    }
     //Stops execution
     func stop(){}
 }

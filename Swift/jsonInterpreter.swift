@@ -14,7 +14,7 @@ func toNode(jsonData:Data) -> Node{
 
 func createNode(nodeData:[String:Any]) -> Node{
     //Creates a node with the defined type
-    var node = Node(type:Node.nodeTypes[nodeData["type"]! as! Int])
+    let node = Node(type:Node.nodeTypes[nodeData["type"]! as! Int])
     //Gets the VarType
     let varType = nodeData["varType"]! as! Int
     //Will store the operand based on the VarType)
