@@ -5,7 +5,7 @@ enum NodeType{
     case GetVal
     case GetRef                 //Or just AssignRef and provide the name of the var as the first children however this can't do other scoped vars
     case DeleteVal
-    case DeleteRef
+    case DeleteRef              //Or UnlinkRef
     case AssignVal
     case AssignRef              //Or LinkRef
     //Vars
@@ -46,6 +46,7 @@ enum NodeType{
     //Other
     case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
     case Execute                //Children - Any                                    Purpose - Execute a list of nodes                                                                       Entry - Has none as it performs no edits to the registers
+    case Program                //Children - [Namespace]                            Purpose - Contains all nodes
 }
 
 //------Classes------
@@ -577,8 +578,11 @@ class ProcessManager{
     //------Variables------
     //Stores the scope stack
     var scopeStack:ScopeStack
+    //Stores a list of namespaces
+    var namespaces:[Namespace] = [Namespace]()
     //Stores all processes to be executed
     var processes:[_Process] = [_Process]()
+
     //------Initialiser------
     init(){
         //Creates the scope stack
@@ -587,6 +591,38 @@ class ProcessManager{
         self.scopeStack.push(scope:VariableScope())
     }
     //------Procedures/Functions------
+    //Configurates the program nodeTree to determine all namespaces
+    //Arguments:    -The node tree  -Node
+    func configurate(nodeTree:Node){
+        //Checks if the root node is a program node
+        if nodeTree.type == .Program{
+            //Loops through every child to get all the namespaces
+            for node in nodeTree.children{
+                //Makes sure that the node is a namespace
+                if node.type != .Namespace{continue}
+                //Extracts the name of the child, text
+                let name = node.children[0].operand
+                //Creates a new namespace with a placeholder nodestate
+                var ns = Namespace(name:name as! String, labels:[String:NodeState]())
+                //Searches through all the other children to identify labels
+                for i in 1..<node.children.count{
+                    //Extracts the execute node
+                    let execute = node.children[i]
+                    //Makes sure that the execute has a label
+                    if execute.children[0].type != .Label{continue}
+                    //Creates a NodeState for the node with a starting index past the label
+                    let nodeState = NodeState(nodeTree:execute, indexStack:[0, 1])
+                    
+                    //Adds the nodestate to the namespace as a label associated with the name
+                    ns.labels[execute.children[0].children[0].operand as! String] = nodeState
+                }
+                //Adds the namespace to namespaces
+                self.namespaces.append(ns)
+            }
+        }
+        
+    }
+
     //Runs all processes indefinately
     func run(){
         while true{

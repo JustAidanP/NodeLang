@@ -3,8 +3,6 @@
 struct Namespace{
     //Stores the name of the namespace
     var name:String
-    //Stores any children namespaces
-    var namespaces:[Namespace] = [Namespace]()
     //Stores the labels of the namespace
     var labels:[String:NodeState] = [String:NodeState]()
 }
