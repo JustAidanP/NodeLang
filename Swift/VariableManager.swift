@@ -168,10 +168,23 @@ class VariableScope{
     //Gets the index for a particular variable
     //Arguments:    -A variable name    -String
     //Returns:      -An index           -Int
-    func getIndex(name:String) -> Int{
+    func getLink(name:String) -> VarType{
         guard let index = self.scopeVariables[name] else{return -1}
         //Returns the index
-        return index
+        return IntType(value:index)
+    }
+    //Assigns a link to a variable
+    //Arguments:    -A variable name    -String
+    //              -The link           -Int
+    func setLink(name:String, link:Int){
+        //Assigns the variable to the link
+        self.scopeVariables[name] = link
+    }
+    //Deletes the link between a variable and a value
+    //Arguments:    -A variable name    -String
+    func removeLink(name:String){
+        //Deletes the variable link
+        self.scopeVariables[name] = nil
     }
 
     //Assigns a value to a variable

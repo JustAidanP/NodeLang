@@ -4,9 +4,9 @@ enum NodeType{
     //--Proposal--
     case CreateVar              //Children - GetVar(Optional), Name                 Purpose - Creates a variable with an empty link in a given scope(getVar), default uses the stack scope
     case GetVar                 //Children - GetVar(Optional), Name                 Purpose - Gets the value linked to the variable from the given scope(getVar), default uses the stack scope
-    case DeleteVal              //Children - GetVar(Optional), Name                 Purpose - Deletes the value assigned with the variable from the given scope(getVar), default uses the stack scope
+    case DeleteVar              //Children - GetVar(Optional), Name                 Purpose - Deletes the value assigned with the variable from the given scope(getVar), default uses the stack scope
     case GetLink                //Children - GetVar(Optional), Name                 Purpose - Returns the link of a variable as a Real_Int from the given scope(getVar), default uses the stack scope
-    case link                   //Children - GetVar(Optional), Name, Real_Int       Purpose - Sets the link of the variable to the link provided from the given scope(getVar), default uses the stack scope
+    case Link                   //Children - GetVar(Optional), Name, Real_Int       Purpose - Sets the link of the variable to the link provided from the given scope(getVar), default uses the stack scope
     case Unlink                 //Children - GetVar(Optional), Name                 Purpose - Removes the link from a variable, not the value, the var is from the given scope(getVar), default uses the stack scope
     case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
     //Primitives
@@ -409,6 +409,42 @@ class _Process{
                     }}
                 //Adds the value of the variable to the registerStack
                 registerStack.append(varScope.getValue(name: name))
+            case .GetLink:
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 2{
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Adds the value of the variable to the registerStack
+                registerStack.append(varScope.getLink(name: name))
+            case .Link:
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the value
+                let link = registerStack.last!; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 3{
+                    //Checks if the value in the register is a variable scope
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Creates a link for the variable
+                varScope.setLink(name: name, link: link)
+            case .Unlink:
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 2{
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Adds the value of the variable to the registerStack
+                varScope.removeLink(name: name)
             case .Assign:
                 //Extracts the var scope
                 var varScope = processManager.scopeStack.stack.last!
