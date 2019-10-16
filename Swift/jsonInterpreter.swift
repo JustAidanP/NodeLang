@@ -14,7 +14,7 @@ func toNode(jsonData:Data) -> Node{
 
 func createNode(nodeData:[String:Any]) -> Node{
     //Creates a node with the defined type
-    let node = Node(type:nodeData["type"]! as! Int8)
+    let node = Node(type:UInt8(nodeData["type"]! as! String)!)
     
     //Will store the operand based on the type of the node
     if node.type == 0x11{node.operand = Int(nodeData["operand"]! as! String)! as Any}           //0x10 - Int

@@ -54,17 +54,17 @@ class Node{
     static let nodeTypes:[NodeType] = [.CreateVar,.GetVar,.DeleteVar,.Text,.Number,.Boolean,.Oper_Add,.Oper_Sub,.Oper_Div,.Oper_Mult,.Logic_Is_Equal,.Logic_Is_Not_Equal,.Logic_Bigger,.Logic_Bigger_Equal,.Logic_Lesser,.Logic_Lesser_Equal,.Logic_And,.Logic_Or,.Logic_Not,.If,.JumpTo,.SubRoutine,.Assign,.Execute]
     //Defines the node's type
     //it is an Int using a byte format
-    var type:Int8
+    var type:UInt8
     //Adds a single piece of extra information, such as a name
     var operand:Any = ""
     //Stores the Node's children, this has to be a specific order
     var children:[Node] = [Node]()
 
     //------Initialiser------
-    //Arguments:    -The type       -NodeType
+    //Arguments:    -The type       -Byte
     //              -The operand    -Any
     //              -The children   -[Node ref]
-    init(type:Int8, operand:Any = "", children:[Node] = [Node]()){
+    init(type:UInt8, operand:Any = "", children:[Node] = [Node]()){
         self.type = type
         self.operand = operand
         self.children = children
