@@ -2,16 +2,13 @@
 //------The type should be able to be stored in a byte with the first 4 bits representing the section and the last 4 representing the specific type
 enum NodeType{
     //--Proposal--
-    case GetVal
-    case GetRef                 //Or just AssignRef and provide the name of the var as the first children however this can't do other scoped vars
-    case DeleteVal
-    case DeleteRef              //Or UnlinkRef
-    case AssignVal
-    case AssignRef              //Or LinkRef
-    //Vars
-    case CreateVar              //Children - GetVar(Optional), Name                 Purpose - Creates a variable in a given scope(getVar), default uses the stack scope
-    case GetVar                 //Children - GetVar(Optional), Name                 Purpose - Gets the variable from the given scope(getVar), default uses the stack scope
-    case DeleteVar              //Children - GetVar(Optional), Name                 Purpose - Deletes the variable from the given scope(getVar), default uses the stack scope
+    case CreateVar              //Children - GetVar(Optional), Name                 Purpose - Creates a variable with an empty link in a given scope(getVar), default uses the stack scope
+    case GetVar                 //Children - GetVar(Optional), Name                 Purpose - Gets the value linked to the variable from the given scope(getVar), default uses the stack scope
+    case DeleteVal              //Children - GetVar(Optional), Name                 Purpose - Deletes the value assigned with the variable from the given scope(getVar), default uses the stack scope
+    case GetLink                //Children - GetVar(Optional), Name                 Purpose - Returns the link of a variable as a Real_Int from the given scope(getVar), default uses the stack scope
+    case link                   //Children - GetVar(Optional), Name, Real_Int       Purpose - Sets the link of the variable to the link provided from the given scope(getVar), default uses the stack scope
+    case Unlink                 //Children - GetVar(Optional), Name                 Purpose - Removes the link from a variable, not the value, the var is from the given scope(getVar), default uses the stack scope
+    case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
     //Primitives
     case Text                   //Operand  - Text
     case Number                 //Operand  - Number                               --Depreciated
@@ -33,8 +30,6 @@ enum NodeType{
     case Logic_And              //Children - Expression, Expression
     case Logic_Or               //Children - Expression, Expression
     case Logic_Not              //Children - Expression, Expression
-    //Conditionals
-    case If                     //Children - Condition, Execute(False), Execute(True)
     //Loops
     case JumpTo                 //Children - RefNamespace, Label                    Purpose - Permenantly jumps to a (parent) execute block with a given label
     case SubRoutine             //Children - RefNamespace, Label                    Purpose - Temporarily jumps to a (parent) execute block with a given label
@@ -44,7 +39,7 @@ enum NodeType{
     case Namespace              //Children - Label, [Execute]                       Purpose - Sets up a namespace for execute blocks
     case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo                                               Entry - Has none as it performs no edits to the registers
     //Other
-    case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
+    case If                     //Children - Condition, Execute(False), Execute(True)
     case Execute                //Children - Any                                    Purpose - Execute a list of nodes                                                                       Entry - Has none as it performs no edits to the registers
     case Program                //Children - [Namespace]                            Purpose - Contains all nodes
 }
@@ -622,7 +617,17 @@ class ProcessManager{
         }
         
     }
-
+    //Creates a new process from a label
+    //Arguments:    -Label      -NodeState
+    //              -IndexStack -[Int]  -Default:[0, 0]
+    func createProcess(label:NodeState, indexStack:[Int]=[0, 0]){
+        //Creates the process
+        let process = _Process(_processManager:self, _nodeTree:NodeState.nodeTree)
+        //Sets the index stack to the process
+        process.indexStack = indexStack
+        //Adds the process to the manager
+        self.processes.append(process)
+    }
     //Runs all processes indefinately
     func run(){
         while true{
