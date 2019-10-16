@@ -9,7 +9,7 @@ let str = "{\"main\":{\"type\":23,\"varType\":-1,\"operand\":\"\",\"children\":[
 let pManager = ProcessManager()
 pManager.scopeStack.stack.last!.declareVar(name:"compare")
 pManager.scopeStack.stack.last!.assignValue(name:"compare", value:IntType(value:1))
-pManager.processes.append(_Process(_processManager:pManager, _nodeTree:toNode(jsonData:Data(str.utf8))))
+pManager.processes.append(Process(_processManager:pManager, _nodeTree:toNode(jsonData:Data(str.utf8))))
 pManager.run()
 
 pManager.scopeStack.dump()
