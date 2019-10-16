@@ -34,7 +34,7 @@ enum NodeType{
     case Logic_Or               //Children - Expression, Expression
     case Logic_Not              //Children - Expression, Expression
     //Conditionals
-    case If                     //Children - Condition, Execute(True), Execute(False)
+    case If                     //Children - Condition, Execute(False), Execute(True)
     //Loops
     case JumpTo                 //Children - RefNamespace, Label                    Purpose - Permenantly jumps to a (parent) execute block with a given label
     case SubRoutine             //Children - RefNamespace, Label                    Purpose - Temporarily jumps to a (parent) execute block with a given label
@@ -430,7 +430,7 @@ class _Process{
                 //Assigns the second child's value to the first variable
                 varScope.assignValue(name: name, value: value)
             //Handles conditional branching
-            case .If:
+            case .If: 
                 //------Pushes the branch node onto the nodeStack, increments the child index and adds a new index for the branch node
                 //Sets the child index to be past all the children
                 indexStack[indexStack.count - 1] = node.children.count + 1
