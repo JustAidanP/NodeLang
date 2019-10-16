@@ -6,22 +6,21 @@ func toNode(jsonData:Data) -> Node{
                 return createNode(nodeData:node)
             }
         }
-        return Node(type:.Execute)
+        return Node(type:0x61)                          //0x61 - Execute
     }
-    catch let e{print(e); return Node(type:.Execute)}
+    catch let e{print(e); return Node(type:0x61)}       //0x61 - Execute
 }
 
 
 func createNode(nodeData:[String:Any]) -> Node{
     //Creates a node with the defined type
-    let node = Node(type:Node.nodeTypes[nodeData["type"]! as! Int])
-    //Gets the VarType
-    let varType = nodeData["varType"]! as! Int
-    //Will store the operand based on the VarType)
-    if varType == 0{node.operand = Int(nodeData["operand"]! as! String)! as Any}
-    else if varType == 1{node.operand = Float(nodeData["operand"]! as! String)! as Any}
-    else if varType == 2{node.operand = String(nodeData["operand"]! as! String) as Any}
-    else if varType == 3{
+    let node = Node(type:nodeData["type"]! as! Int8)
+    
+    //Will store the operand based on the type of the node
+    if node.type == 0x11{node.operand = Int(nodeData["operand"]! as! String)! as Any}           //0x10 - Int
+    else if node.type == 0x12{node.operand = Float(nodeData["operand"]! as! String)! as Any}    //0x12 - Float
+    else if node.type == 0x10{node.operand = String(nodeData["operand"]! as! String) as Any}    //0x10 - String
+    else if node.type == 0x13{                                                                  //0x13 - Boolean
         if nodeData["operand"]! as! String == "1"{node.operand = true}
         else if nodeData["operand"]! as! String == "0"{node.operand = false}
     }
