@@ -10,15 +10,15 @@ struct Namespace{
 //Defines a NodeState, this stores information about the process at the point of storage
 struct NodeState{
     //------Variables------
-    //Stores the nodeTree
-    var nodeTree:Node
+    //Stores the nodeStack
+    var nodeStack:[Node]
     //Stores the indexStack at that point
     var indexStack:[Int]
     //------Procedures/Functions------
     //Gets a clean NodeState
-    //Arguments:    -A node tree    -Node
+    //Arguments:    -A node stack    -[Node]
     //Returns:  An empty nodestate  -NodeState
-    static func clean(_nodeTree:Node) -> NodeState{
-        return NodeState(nodeTree:_nodeTree, indexStack: [0, 0])
+    static func clean(_nodeStack:Node) -> NodeState{
+        return NodeState(nodeStack:_nodeStack, indexStack: [0, 0])
     }
 }

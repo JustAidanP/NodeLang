@@ -18,8 +18,8 @@ enum NodeType{
     //Operators, 0x2X
     case Oper_Add               //Children - Expression, Expression
     case Oper_Sub               //Children - Expression, Expression
-    case Oper_Div               //Children - Expression, Expression
     case Oper_Mult              //Children - Expression, Expression
+    case Oper_Div               //Children - Expression, Expression
     //Logic Operators, 0x3X
     case Logic_Is_Equal         //Children - Expression, Expression
     case Logic_Is_Not_Equal     //Children - Expression, Expression
@@ -30,13 +30,14 @@ enum NodeType{
     case Logic_And              //Children - Expression, Expression
     case Logic_Or               //Children - Expression, Expression
     case Logic_Not              //Children - Expression, Expression
-    //Loops, 0x4X
+    //Jumps, 0x4X
     case JumpTo                 //Children - RefNamespace, Label                    Purpose - Permenantly jumps to a (parent) execute block with a given label
     case SubRoutine             //Children - RefNamespace, Label                    Purpose - Temporarily jumps to a (parent) execute block with a given label
-    case Label                  //Children - Text                                   Purpose - Defines a location for a jump                                                                 Entry - Has none as it performs no edits to the registers
+    case Label                  //Children - Text                                   Purpose - Creates a new label in the process
+    case RefLabel               //Children - Text                                   Purpose - Defines a location for a jump                                                                 Entry - Has none as it performs no edits to the registers
     case Recall                 //                                                  Purpose - Ends the current subroutine
     //Namespaces, 0x5X
-    case Namespace              //Children - Label, [Execute]                       Purpose - Sets up a namespace for execute blocks
+    case Namespace              //Children - Label, [Execute]                       Purpose - Sets up a namespace for execute blocks                                                        Entry - Has none as it should never be used under an execute
     case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo                                               Entry - Has none as it performs no edits to the registers
     //Other, 0x6X
     case If                     //Children - Condition, Execute(False), Execute(True)
@@ -52,7 +53,8 @@ class Node{
     //Stores an association of all node types to an index
     static let nodeTypes:[NodeType] = [.CreateVar,.GetVar,.DeleteVar,.Text,.Number,.Boolean,.Oper_Add,.Oper_Sub,.Oper_Div,.Oper_Mult,.Logic_Is_Equal,.Logic_Is_Not_Equal,.Logic_Bigger,.Logic_Bigger_Equal,.Logic_Lesser,.Logic_Lesser_Equal,.Logic_And,.Logic_Or,.Logic_Not,.If,.JumpTo,.SubRoutine,.Assign,.Execute]
     //Defines the node's type
-    var type:NodeType
+    //it is an Int using a byte format
+    var type:Int8
     //Adds a single piece of extra information, such as a name
     var operand:Any = ""
     //Stores the Node's children, this has to be a specific order
@@ -62,7 +64,7 @@ class Node{
     //Arguments:    -The type       -NodeType
     //              -The operand    -Any
     //              -The children   -[Node ref]
-    init(type:NodeType, operand:Any = "", children:[Node] = [Node]()){
+    init(type:Int8, operand:Any = "", children:[Node] = [Node]()){
         self.type = type
         self.operand = operand
         self.children = children
@@ -74,7 +76,7 @@ class Node{
     //Returns:      -Whether processing has finished    -Bool
     func clockPrerocess(process:Process)->Bool{
         //Makes sure that only the first child of an if node is ran
-        if self.type == .If && process.indexStack.last! >= 1{return true}
+        if self.type == 0x60 && process.indexStack.last! >= 1{return true}                              //0x60 - If
         //Returns true if there are no children or preprocessing has finished
         if self.children.count == 0 || process.indexStack.last! >= self.children.count{return true}
         //Adds the child to the nodeStack of the process
@@ -99,13 +101,15 @@ class Process{
     //Defines whether the process should be killed by the process manager
     var shouldKill:Bool = false
     //Stores the node tree
-    var nodeTree:Node = Node(type:.Execute)
+    var nodeTree:Node = Node(type:0x61)                                         //0x61 - Execute
     //Stores the node stack
     var nodeStack:[Node] = [Node]()
     //Stores the index stack, index's the child of the current node
     var indexStack:[Int] = [0, 0]
     //Stores the register stack
     var registerStack:[VarType] = [VarType]()
+    //Stores the labels found of the process
+    var labels:[String:NodeState] = [String:NodeState]()
 
     //------Initialiser------
     //Arguments:    -The process manager it belongs to  -ProcessManager ref
@@ -151,12 +155,8 @@ class Process{
 
         //Switches through the Node's type
         switch node.type{
-            //Primitives
-            case .Text: registerStack.append(StringType(value:node.operand))
-            case .Number: registerStack.append((node.operand as? Int != nil) ? IntType(value:node.operand) : FloatType(value:node.operand as! Float)) //Converts the number to FloatType
-            case .Boolean: registerStack.append(BoolType(value:node.operand))
             //Handles variables
-            case .CreateVar:
+            case 0x00: //CreateVar
                 var varScope = processManager.scopeStack.stack.last!
                 //Extracts the name
                 let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -167,18 +167,7 @@ class Process{
                     }}
                 //Creates a variable with the name of the child
                 varScope.declareVar(name: name)
-            case .DeleteVar:
-                var varScope = processManager.scopeStack.stack.last!
-                //Extracts the name
-                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
-                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
-                if node.children.count >= 2{
-                    if let _ = registerStack.last!.value as? VariableScope{
-                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
-                    }}
-                //Deletes the variable with the name
-                varScope.deleteVar(name: name)
-            case .GetVar:
+            case 0x01: //GetVar
                 var varScope = processManager.scopeStack.stack.last!
                 //Extracts the name
                 let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -189,7 +178,18 @@ class Process{
                     }}
                 //Adds the value of the variable to the registerStack
                 registerStack.append(varScope.getValue(name: name))
-            case .GetLink:
+            case 0x02: //DeleteVar
+                var varScope = processManager.scopeStack.stack.last!
+                //Extracts the name
+                let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
+                if node.children.count >= 2{
+                    if let _ = registerStack.last!.value as? VariableScope{
+                        varScope = registerStack.last!.value as! VariableScope; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    }}
+                //Deletes the variable with the name
+                varScope.deleteVar(name: name)
+            case 0x03: //GetLink
                 var varScope = processManager.scopeStack.stack.last!
                 //Extracts the name
                 let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -200,10 +200,10 @@ class Process{
                     }}
                 //Adds the value of the variable to the registerStack
                 registerStack.append(varScope.getLink(name: name))
-            case .Link:
+            case 0x04: //Link
                 var varScope = processManager.scopeStack.stack.last!
                 //Extracts the value
-                let link = registerStack.last!; registerStack.removeLast() //Extracts the value and removes it from the stack
+                let link = registerStack.last! as! Int; registerStack.removeLast() //Extracts the value and removes it from the stack
                 //Extracts the name
                 let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
                 //Checks if the children count reflects there being a getVar and then overwrites the varScope to be the scope in the register
@@ -214,7 +214,7 @@ class Process{
                     }}
                 //Creates a link for the variable
                 varScope.setLink(name: name, link: link)
-            case .Unlink:
+            case 0x05: //Unlink
                 var varScope = processManager.scopeStack.stack.last!
                 //Extracts the name
                 let name = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -225,7 +225,7 @@ class Process{
                     }}
                 //Adds the value of the variable to the registerStack
                 varScope.removeLink(name: name)
-            case .Assign:
+            case 0x06: //Assign
                 //Extracts the var scope
                 var varScope = processManager.scopeStack.stack.last!
                 //Extracts the value
@@ -240,20 +240,17 @@ class Process{
                     }}
                 //Assigns the second child's value to the first variable
                 varScope.assignValue(name: name, value: value)
-            //Handles conditional branching
-            case .If: 
-                //------Pushes the branch node onto the nodeStack, increments the child index and adds a new index for the branch node
-                //Sets the child index to be past all the children
-                indexStack[indexStack.count - 1] = node.children.count + 1
-
-                //Evaluates the condition
-                let condition = registerStack.last!.value as! Bool; registerStack.removeLast() //Extracts the value and removes it from the stack
-                //Adds an index of zero to the indexStack for the branch node
-                indexStack.append(0)
-                //Adds the corresponding branch to the nodeStack
-                if condition{nodeStack.append(node.children[2])}else{nodeStack.append(node.children[1])}
+            //Primitives
+            case 0x10: //Text 
+                registerStack.append(StringType(value:node.operand))
+            case 0x11: //Real_Int
+                registerStack.append(IntType(value:node.operand)) //Converts the number to IntType
+            case 0x12: //Real_Float
+                registerStack.append(FloatType(value:node.operand as! Float)) //Converts the number to FloatType
+            case 0x13: //Boolean 
+                registerStack.append(BoolType(value:node.operand))
             //Operators
-            case .Oper_Add:
+            case 0x20: //Oper_Add
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -262,7 +259,7 @@ class Process{
                 else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.operator_add(lhs:lhs as! Float, rhs:rhs as! Float))}
                 //Exits
                 return
-            case .Oper_Sub:
+            case 0x21: //Oper_Sub
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -271,7 +268,7 @@ class Process{
                 else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.operator_sub(lhs:lhs as! Float, rhs:rhs as! Float))}
                 //Exits
                 return
-            case .Oper_Mult:
+            case 0x22: //Oper_Mult
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -280,7 +277,7 @@ class Process{
                 else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.operator_mult(lhs:lhs as! Float, rhs:rhs as! Float))}
                 //Exits
                 return
-            case .Oper_Div:
+            case 0x23: //Oper_Div
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -290,7 +287,7 @@ class Process{
                 //Exits
                 return
             //Logical Operators
-            case .Logic_Is_Equal:
+            case 0x30: //Logic_Is_Equal
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -301,7 +298,7 @@ class Process{
                 else if (lhs as? String != nil) && (rhs as? String != nil){registerStack.append(StringType.Logic_Is_Equal(lhs:lhs as! String, rhs:rhs as! String))}
                 //Exits
                 return
-            case .Logic_Is_Not_Equal:
+            case 0x31: //Logic_Is_Not_Equal
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -312,7 +309,7 @@ class Process{
                 else if (lhs as? String != nil) && (rhs as? String != nil){registerStack.append(StringType.Logic_Is_Not_Equal(lhs:lhs as! String, rhs:rhs as! String))}
                 //Exits
                 return
-            case .Logic_Bigger:
+            case 0x32: //Logic_Bigger
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -321,7 +318,7 @@ class Process{
                 else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Bigger(lhs:lhs as! Float, rhs:rhs as! Float))}
                 //Exits
                 return
-            case .Logic_Bigger_Equal:
+            case 0x33: //Logic_Bigger_Equal
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -330,7 +327,7 @@ class Process{
                 else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Bigger_Equal(lhs:lhs as! Float, rhs:rhs as! Float))}
                 //Exits
                 return
-            case .Logic_Lesser:
+            case 0x34: //Logic_Lesser
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -339,7 +336,7 @@ class Process{
                 else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Lesser(lhs:lhs as! Float, rhs:rhs as! Float))}
                 //Exits
                 return
-            case .Logic_Lesser_Equal:
+            case 0x35: //Logic_Lesser_Equal
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -348,7 +345,7 @@ class Process{
                 else if (lhs as? Float != nil) && (rhs as? Float != nil){registerStack.append(FloatType.Logic_Is_Lesser_Equal(lhs:lhs as! Float, rhs:rhs as! Float))}
                 //Exits
                 return
-            case .Logic_And:
+            case 0x36: //Logic_And
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -356,7 +353,7 @@ class Process{
                 if (lhs as? Bool != nil) && (rhs as? Bool != nil){registerStack.append(BoolType.Logic_And(lhs:lhs as! Bool, rhs:rhs as! Bool))}
                 //Exits
                 return
-            case .Logic_Or:
+            case 0x37: //Logic_Or
                 //Extracts the values
                 let rhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -364,7 +361,7 @@ class Process{
                 if (lhs as? Bool != nil) && (rhs as? Bool != nil){registerStack.append(BoolType.Logic_Or(lhs:lhs as! Bool, rhs:rhs as! Bool))}
                 //Exits
                 return
-            case .Logic_Not:
+            case 0x38: //Logic_Not
                 //Extracts the values
                 let lhs = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
                 //Calls the logic not operator
@@ -372,13 +369,59 @@ class Process{
                 //Exits
                 return
             //Jumps
-            case .Recall:
+            case 0x40: //JumpTo
+                //Jumps the process to the nodestate of the label
+                //Extracts the name of the label from the top register
+                let labelName = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a refNamespace
+                if node.children.count >= 2{
+                    //Extracts the name of the namespace
+                    let nsName = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    //Extracts the namespace with the correct name
+                    for ns in processManager.namespaces{
+                        if ns.name == nsName{
+                            //Finds the correct label
+                            guard let label = ns.labels[labelName] else{return}
+                            //Overwrites the nodeStack and indexStack
+                            nodeStack = label.nodeStack
+                            indexStack = label.indexStack
+                            return  //Exits
+                        }}}
+                //Finds the correct label
+                guard let label = labels[labelName] else{return}
+                //Overwrites the nodeStack and indexStack
+                nodeStack = label.nodeStack
+                indexStack = label.indexStack
+                return  //Exits
+            case 0x41: //SubRoutine
+                break
+            case 0x42: //Label
+                //Creates a new label in the current process with the given name
+                let labelName = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Adds one to the child in indexStack
+                indexStack[indexStack.count - 1] += 1
+                //Adds a nodeState to the process
+                labels[labelName] = NodeState(nodeStack:nodeStack, indexStack:indexStack)
+                break
+            case 0x44: //Recall
                 //Sets the current process to end
                 shouldKill = true
                 //If the process has a process, it sets it to clock
                 if let parent = self.processParent{parent.shouldClock = true}           //------Change for Async
                 //Exits
                 return
+            //Handles conditional branching
+            case 0x60: //If 
+                //------Pushes the branch node onto the nodeStack, increments the child index and adds a new index for the branch node
+                //Sets the child index to be past all the children
+                indexStack[indexStack.count - 1] = node.children.count + 1
+
+                //Evaluates the condition
+                let condition = registerStack.last!.value as! Bool; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Adds an index of zero to the indexStack for the branch node
+                indexStack.append(0)
+                //Adds the corresponding branch to the nodeStack
+                if condition{nodeStack.append(node.children[2])}else{nodeStack.append(node.children[1])}
             default: break
         }
         return
@@ -406,11 +449,11 @@ class ProcessManager{
     //Arguments:    -The node tree  -Node
     func configurate(nodeTree:Node){
         //Checks if the root node is a program node
-        if nodeTree.type == .Program{
+        if nodeTree.type == 0x62{                                                               //0x62 - Program
             //Loops through every child to get all the namespaces
             for node in nodeTree.children{
                 //Makes sure that the node is a namespace
-                if node.type != .Namespace{continue}
+                if node.type != 0x50{continue}                                                  //0x50 - Namespace
                 //Extracts the name of the child, text
                 let name = node.children[0].operand
                 //Creates a new namespace with a placeholder nodestate
@@ -420,9 +463,9 @@ class ProcessManager{
                     //Extracts the execute node
                     let execute = node.children[i]
                     //Makes sure that the execute has a label
-                    if execute.children[0].type != .Label{continue}
+                    if execute.children[0].type != 0x42{continue}                               //0x42 - Label
                     //Creates a NodeState for the node with a starting index past the label
-                    let nodeState = NodeState(nodeTree:execute, indexStack:[0, 1])
+                    let nodeState = NodeState(nodeStack:[execute], indexStack:[0, 1])
                     
                     //Adds the nodestate to the namespace as a label associated with the name
                     ns.labels[execute.children[0].children[0].operand as! String] = nodeState
@@ -436,11 +479,11 @@ class ProcessManager{
     //Creates a new process from a label
     //Arguments:    -Label      -NodeState
     //              -IndexStack -[Int]  -Default:[0, 0]
-    func createProcess(label:NodeState, indexStack:[Int]=[0, 0]){
+    func createProcess(label:NodeState){
         //Creates the process
-        let process = Process(_processManager:self, _nodeTree:NodeState.nodeTree)
+        let process = Process(_processManager:self, _nodeTree:label.nodeStack[label.nodeStack.count - 1])
         //Sets the index stack to the process
-        process.indexStack = indexStack
+        process.indexStack = label.indexStack
         //Adds the process to the manager
         self.processes.append(process)
     }
