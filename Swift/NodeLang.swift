@@ -398,8 +398,6 @@ class Process{
             case 0x42: //Label
                 //Creates a new label in the current process with the given name
                 let labelName = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
-                //Adds one to the child in indexStack
-                indexStack[indexStack.count - 1] += 1
                 //Adds a nodeState to the process
                 labels[labelName] = NodeState(nodeStack:nodeStack, indexStack:indexStack)
                 break
