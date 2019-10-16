@@ -169,7 +169,7 @@ class VariableScope{
     //Arguments:    -A variable name    -String
     //Returns:      -An index           -Int
     func getLink(name:String) -> VarType{
-        guard let index = self.scopeVariables[name] else{return -1}
+        guard let index = self.scopeVariables[name] else{return IntType(value:-1)}
         //Returns the index
         return IntType(value:index)
     }

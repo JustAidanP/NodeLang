@@ -18,7 +18,7 @@ struct NodeState{
     //Gets a clean NodeState
     //Arguments:    -A node stack    -[Node]
     //Returns:  An empty nodestate  -NodeState
-    static func clean(_nodeStack:Node) -> NodeState{
+    static func clean(_nodeStack:[Node]) -> NodeState{
         return NodeState(nodeStack:_nodeStack, indexStack: [0, 0])
     }
 }
