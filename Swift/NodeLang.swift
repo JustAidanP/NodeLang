@@ -394,7 +394,27 @@ class Process{
                 indexStack = label.indexStack
                 return  //Exits
             case 0x41: //SubRoutine
-                break
+                //Creates a new process for the nodestate of the label
+                //Extracts the name of the label from the top register
+                let labelName = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the children count reflects there being a refNamespace
+                if node.children.count >= 2{
+                    //Extracts the name of the namespace
+                    let nsName = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
+                    //Extracts the namespace with the correct name
+                    for ns in processManager.namespaces{
+                        if ns.name == nsName{
+                            //Finds the correct label
+                            guard let label = ns.labels[labelName] else{return}
+                            //Creates a new process
+                            self.processManager.createProcess(label:label, processParent:self)
+                            return  //Exits
+                        }}}
+                //Finds the correct label
+                guard let label = labels[labelName] else{return}
+                //Creates a new process
+                self.processManager.createProcess(label:label, processParent:self)
+                return  //Exits
             case 0x42: //Label
                 //Creates a new label in the current process with the given name
                 let labelName = registerStack.last!.value as! String; registerStack.removeLast() //Extracts the value and removes it from the stack
@@ -475,11 +495,13 @@ class ProcessManager{
         
     }
     //Creates a new process from a label
-    //Arguments:    -Label      -NodeState
-    //              -IndexStack -[Int]  -Default:[0, 0]
-    func createProcess(label:NodeState){
+    //Arguments:    -Label              -NodeState
+    //              -The process parent -Process    -Nil
+    func createProcess(label:NodeState, processParent:Process? = nil){
         //Creates the process
         let process = Process(_processManager:self, _nodeTree:label.nodeStack[label.nodeStack.count - 1])
+        //Adds the processParent to the process, if it was passed
+        process.processParent = processParent
         //Sets the index stack to the process
         process.indexStack = label.indexStack
         //Adds the process to the manager

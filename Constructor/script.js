@@ -1,276 +1,239 @@
 //------Variables------
 //Stores the canvas
-let canvas = document.getElementById("nodeCanvas")
+let canvas = document.getElementById("byteCanvas")
 //Stores the canvas context
 let ctx = canvas.getContext("2d");
-//Stores all node types
-let nodeTypes = ["CreateVar","GetVar","DeleteVar","Text","Number","Boolean","Oper_Add","Oper_Sub","Oper_Div","Oper_Mult","Logic_Is_Equal","Logic_Is_Not_Equal","Logic_Bigger","Logic_Bigger_Equal","Logic_Lesser","Logic_Lesser_Equal","Logic_And","Logic_Or","Logic_Not","If","While","For","Assign","Execute"]
-let nodeTypeInfo = [["#0062ff", "+V"], ["#0043ad", "V"], ["#002e78", "-V"],             //Blue
-["#00ff0d", "Text"], ["#009608", "Num"], ["#006e06", "Bool"],                                //Green
-["#ff0000", "+"], ["#bd0000", "-"], ["#bd0000", "/"], ["#8c4d4d", "*"],                     //Red
-["#ff00fb", "=="], ["#821980", "!="], ["#660264", ">"], ["#b000ac", ">="], ["#e07bde", "<"], ["#a15d9f", "<="], ["#5c335a", "&&"], ["#ebb2e8", "||"], ["#a1749e", "!"],  //Pink
-["#eaff00", "If"], ["#b5c404", "While"], ["#687001", "For"],                                //Yellow
-["#00fbff", "="], ["#03a3a6", "E"]                                             //Cyan
-]
-//Stores an x divider, this defines the position of the last bottom node
-var xDivider = 0;
-//Stores all nodes as children
-var nodeTree = generateNode("Execute", "")
-//Stores a newNode
-var newNode = null
-//Stores a node that has been selected
-var selectedNode = null
+
+//Stores the program node
+let programNode = Node(0);
+//Stores a reference to the closest node
+let closestNode = null;
+//Stores a reference to the parent of the closest node
+let closestNodeParent = null;
 //Stores the mouse x and y
-var mouseX = 0
-var mouseY = 0
+let mousePos = Position(0, 0);
 
 //------Procedures/Functions------
-//Generates a new node
-//Arguments:    -The nodeType   -String
-//              -An operand     -String
-function generateNode(_nodeType, _operand){
-    return{
-        xPos:0,
-        yPos:0,
-        type:nodeTypes.indexOf(_nodeType),
-        varType:-1,
-        operand:_operand,
-        children:[]
-    };
-}
-
-//Generates an xPosition for each node
-//Arguments:    -A node -Node
-//              -A yPos -Int
-function generateX(node, yPos){
-    node.yPos = yPos
-    //Checks to see if the node is a last node
-    if (node.children.length == 0){
-        //Sets the xPos to the next space beyond the boundary
-        node.xPos = xDivider + 75;
-        xDivider = node.xPos;
-    }
-    else{
-        //Calculates the mean between all children points
-        var xMean = 0;
-        for (var i=0; i<node.children.length; i++){
-            generateX(node.children[i], yPos + 75)
-            xMean += node.children[i].xPos;
-        }
-        //Calculates the xPos as the mean
-        node.xPos = xMean / node.children.length;
-    }
-    //Draws the node
-    drawNode(node);
-    //Draws a line to all of it's children
-    for (var i=0; i<node.children.length; i++){
-        drawLine(node.xPos, node.yPos + 25, node.children[i].xPos, node.children[i].yPos - 25);
-    }
-}
-
-//Adds a child node to a node
-//Arguments:    -A node -Node
-function addChild(node){
-    node.children.push(generateNode());
-}
-
-//Calculates a magnitude
+//Creates a position object
 //Arguments:    -x          -Int
 //              -y          -Int
-//Returns:      -Magnitude  -Float
-function mag(x, y){return Math.sqrt(x * x + y * y)}
+//Returns:      -A Position -{Int, Int}
+function Position(x, y){
+    return {x:x, y:y};
+}
+//Creates a node object
+//Arguments:    -The type   -Int
+//Returns:      -The node   -Object
+function Node(type){
+    return {
+        type: 0,
+        operand: "",
+        children: [],
+        boundary: 0,                //Stores the size boundary of the node
+        position: null,             //Stores the position of the node after it has been drawn, only used for distance checking
+        width: 160,
+        height: 80
+    };
+}
+//Generates a boundary size for a node by recursively creating boundaries for all the children nodes
+//Arguments:    -The node           -Node
+//Returns:      -The boundary size  -Int
+function generateBoundary(node){
+    //Checks if the boundary should be returned as the size of the node with padding
+    if (node.children.length == 0){node.boundary = node.width + 20; return node.boundary;}
+    //Recursively calculates the boundaries
+    for (var i=0; i<node.children.length; i++){
+        //Generates the boundary for the node and adds it to the sum of the boundary for this node
+        node.boundary += generateBoundary(node.children[i]);
+    }
+    //Returns the boundary size
+    return node.boundary;
+}
+//Draws the nodes based on their boundaries
+//Arguments:    -The node       -Node
+//              -The offset     -Ref Position
+function drawNode(node, offset){
+    //------Draw node routine
+    node.position = Position(offset.x + node.boundary / 2, offset.y)
+    //Draws the node at the centre of its boundary
+    drawRectWithCorner(node.position, node.width, node.height, 10);
+    //Stores the node position
 
-//Performs a search for an x and y to find the closest node
-//Arguments:    -An x   -Int
-//              -A y    -Int
-function searchTree(x, y){
-    //Stores the current closest node
-    var closestNode = nodeTree
-    //Keeps looking for a closer node
-    while (true){
-        //Stores the new closest node
-        var newClosest = closestNode
-        for (var i=0; i<closestNode.children.length; i++){
-            //Checks if this node is closer than the current closest
-            if (mag(closestNode.children[i].xPos - x, closestNode.children[i].yPos - y) < mag(newClosest.xPos - x, newClosest.yPos - y)){
-                newClosest = closestNode.children[i]
+    //------Draws other nodes
+    //Adds the node height to the y offset for drawing of the children
+    offset.y += node.height + 30
+    //Draws the children
+    for (var i=0; i<node.children.length; i++){
+        //Draws a line from the current node to the childNode
+        ctx.beginPath();
+        ctx.moveTo(node.position.x, node.position.y + node.height / 2);
+        ctx.lineTo(offset.x + node.children[i].boundary / 2, offset.y - node.children[i].height / 2);
+        ctx.stroke();
+        //Generates the boundary for the node and adds it to the sum of the boundary for this node
+        drawNode(node.children[i], offset);
+    }
+
+    //Only adds the boundary size if the node has no children
+    if (node.children.length == 0){offset.x += node.boundary;}
+    //Removes the node height from the y offset
+    offset.y -= node.height + 30
+}
+
+//Draws a rectangle at a point with a particular corner radius
+//Arguments:    -The point          -Ref Position
+//              -The width          -Int
+//              -The height         -Int
+//              -The corner radius  -Int
+function drawRectWithCorner(pos, width, height, radius){
+    //Defines constants
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    //Use MoveTo, LineTo and Arc
+    ctx.beginPath();
+    //Moves to the top left position and draws to the right
+    ctx.moveTo(pos.x - halfWidth + radius, pos.y - halfHeight);
+    //Top segment
+    ctx.lineTo(pos.x + halfWidth - radius, pos.y - halfHeight);
+    ctx.arc(pos.x + halfWidth - radius, pos.y - halfHeight + radius, radius, - Math.PI / 2, 0);
+    //Right segment
+    ctx.lineTo(pos.x + halfWidth, pos.y + halfHeight - radius);
+    ctx.arc(pos.x + halfWidth - radius, pos.y + halfHeight - radius, radius, 0, Math.PI / 2);
+    //Bottom Segment
+    ctx.lineTo(pos.x - halfWidth + radius, pos.y + halfHeight);
+    ctx.arc(pos.x - halfWidth + radius, pos.y + halfHeight - radius, radius, Math.PI / 2, Math.PI);
+    //Top Segment
+    ctx.lineTo(pos.x - halfWidth, pos.y - halfHeight + radius);
+    ctx.arc(pos.x - halfWidth + radius, pos.y - halfHeight + radius, radius, Math.PI, -Math.PI / 2);
+    ctx.stroke();
+}
+
+//Finds the node closest to a given position
+//Arguments:    -A node             -Node
+//              -A position         -Ref Position
+function getClosestNode(node, point){
+    //Stores the y distance between the point and the node
+    let dy = Math.abs(point.y - node.position.y);
+    //Checks if any child is closer
+    for (var i=0;i<node.children.length;i++){
+        //Stores the y distance between the point and the child node
+        let dyc = Math.abs(point.y - node.children[i].position.y);
+        //Checks if the node's y position is closer than the current node, it then skips the checks for the node
+        if (dyc > dy){continue;}
+
+        //Stores whether the point is less that the size of the node
+        let lesser = point.x <= node.children[i].position.x + node.children[i].boundary / 2;
+        //Stores whether the point is bigger that the size of the node
+        let larger = point.x >= node.children[i].position.x - node.children[i].boundary / 2;
+
+        //Runs the checks for the node if it is first
+        if (i == 0){
+            //Checks if the position is less than the size of the node
+            if (lesser){
+                closestNodeParent = node;
+                closestNode = node.children[i];
+                getClosestNode(node.children[i], point);
+                return;
             }
         }
-        //If closestNode didn't change, it is returned
-        if (closestNode == newClosest){return closestNode}
-        //Otherwise it sets closestNode to newClosest
-        closestNode = newClosest
+        //Runs the checks for the node if it is last
+        if (i == node.children.length - 1){
+        //Checks if the position is bigger than the size of the node
+            if (larger){
+                closestNodeParent = node;
+                closestNode = node.children[i];
+                getClosestNode(node.children[i], point);
+                return;
+            }
+        }
+        //Checks if the poisition is in the node
+        if (lesser && larger){
+            closestNodeParent = node;
+            closestNode = node.children[i];
+            getClosestNode(node.children[i], point);
+            return;
+        }
     }
-}
-
-//Redraws the canvas
-function reDraw(){
-    //Clears the screen
-    canvas.width = canvas.width;
-    //Draws the nodeTree
-    xDivider = 0;
-    generateX(nodeTree, 50);
-
-    //Draws the newNode at the mouse position
-    if (newNode != null){
-        drawNode(newNode);
-        //Finds the node closest to newNode
-        let closest = searchTree(newNode.xPos, newNode.yPos);
-        //Draws a line to the closestNode
-        drawLine(closest.xPos, closest.yPos + 25, newNode.xPos, newNode.yPos - 25)
-    }
-}
-
-//Draws a node
-//Arguments:    -A node -Node
-function drawNode(node){
-    //Checks if the node is the selectedNode
-    if (node === selectedNode){ctx.fillStyle = "#CDCDCD";}
-    else{ctx.fillStyle = "White";}
-    //Sets the stroke style to the node colour
-    ctx.strokeStyle = nodeTypeInfo[node.type][0];
-    //Draws a circle at the xPos, yPos
+    //It is assumed that this node is closest
+    //Draws a circle at the position
     ctx.beginPath();
-    ctx.arc(node.xPos, node.yPos, 25, 0, 2 * Math.PI);
-    //Fills the node
-    ctx.fill();
+    ctx.arc(node.position.x, node.position.y, 10, 0, 2 * Math.PI);
     ctx.stroke();
 
-    //Adds text
-    ctx.textAlign = "center";
-    ctx.textBaseline = 'middle';
-    ctx.font = "30px Arial";
-    ctx.fillStyle = "Black"
-    ctx.fillText(nodeTypeInfo[node.type][1], node.xPos, node.yPos); 
-
-    //Resets the styling
-    ctx.strokeStyle = "Black";
-    ctx.fillStyle = "White"
+    distanceFunction(node, point);
 }
+//Finds the distance between a point and a node
+//Arguments:    -A node             -Node
+//              -A position         -Ref Position
+//Returns:      -A distance         -Float
+function distanceFunction(node, point){
+    //Works it out for the children first
+    var dx = Math.min(Math.max(point.x, node.position.x - node.width / 2), node.position.x + node.width / 2);
+    var dy = Math.min(Math.max(point.y, node.position.y - node.height / 2), node.position.y + node.height / 2);
 
-//Draws a line
-//Arguments:    -x1 -Int
-//              -y1 -Int
-//              -y2 -Int
-//              -y2 -Int
-function drawLine(x1, y1, x2, y2){
+    //Draws a line from the mouse point to the closest position
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.moveTo(point.x, point.y);
+    ctx.lineTo(dx, dy);
     ctx.stroke();
+
+    //Calculates the distance between the point and the node
+    return Math.pow(dx - point.x, 2) + Math.pow(dy - point.y, 2);
 }
 
 //Gets the mouse x and y
 //Arguments:    -Event  -Event
 function getMousePos(event){
     let rect = canvas.getBoundingClientRect();
-    mouseX = event.x - rect.left;
-    mouseY = event.y - rect.top;
-    //Sets the newNode position to the mouse position
-    if (newNode != null){
-        newNode.xPos = mouseX
-        newNode.yPos = mouseY
-    }
-    //Redraws the screen
-    reDraw();
-}
-
-//Detects a mouse click
-//Arguments:    -Event  -Event
-function getMouseDown(event){
-    //Finds the closest node
-    let closestNode = searchTree(mouseX, mouseY)
-    //If there is a newNode, it assigns it to the nearest node
-    if (newNode){closestNode.children.push(newNode); newNode = null; return}
-    //Otherwise it will check if a node was clicked, checks if the click is within the circle radius of a node
-    if (mag(closestNode.xPos - mouseX, closestNode.yPos - mouseY) < 25 && newNode == null){
-        //Sets selectedNode to the clicked node
-        selectedNode = closestNode;
-        //Sets node type to the selectedNode type
-        document.getElementById("NodeType").value = nodeTypes[closestNode.type];
-        //Sets the operand to the selectedNode type
-        document.getElementById("Operand").value = closestNode.operand;
-        //Updates the button text
-        document.getElementById("GenerateNode").innerHTML = "Edit Node";
-    }else{
-        //Updates the button text
-        document.getElementById("GenerateNode").innerHTML = "Generate Node";
-        //Resets selectedNode
-        selectedNode = null;
-    }
-
-    //Redraws ths screen
-    reDraw();
-}
-//Detects a mouse release
-//Arguments:    -Event  -Event
-function getMouseUp(event){
-}
-
-//Handles an outlet for the generateNode button click
-function genNodeOutlet(){
-    //Manages action based on whether a node has been selected
-    if (selectedNode){
-        //Updates the type
-        selectedNode.type = nodeTypes.indexOf(document.getElementById('NodeType').value);
-        //Updates the operand
-        selectedNode.operand = document.getElementById('Operand').value;
-        //Updates the button text
-        document.getElementById("GenerateNode").innerHTML = "Generate Node";
-        //Resets selectedNode
-        selectedNode = null
-    }else{
-        //Generates a new node
-        newNode = generateNode(document.getElementById('NodeType').value, document.getElementById('Operand').value);
-    }
+    //Gets the moust position and scales it to the canvas size
+    mousePos.x = event.x * canvas.width / rect.width;
+    mousePos.y = event.y * canvas.height / rect.height;
 
     //Redraws the screen
-    reDraw();
+    drawCanvas();
 }
 
-//Adds nodeType elements to the creationTab
-function addNodeTypes(){
-    for(var i = 0; i < ips["ips"].length; i++){
-        //Adds the ip as an option to the stat selector
-        element = document.createElement("option");
-        element.text = ips["ips"][i];
-        document.getElementById('ipSelector').add(element);
-    }
-}
-//Removes all position data from the nodes
-//Arguments:    -A Node     -Node
-function removePositionData(node){
-    delete node.xPos
-    delete node.yPos
-    //Fills in varType
-    if (node.type == 4){if (Number.isInteger(parseFloat(node.operand))){node.varType = 0}}        //Int
-    if (node.type == 4){if (!Number.isInteger(parseFloat(node.operand))){node.varType = 1}}        //Float
-    if (node.type == 3){node.varType = 2}        //String
-    if (node.type == 5){node.varType = 3}        //Bool
-    //Gets its children to remove positionData
-    for (var i=0; i < node.children.length; i++){
-        removePositionData(node.children[i])
-    }
-}
-//Exports the nodeTree as json
-function exportNode(){
-    //Removes position data
-    removePositionData(nodeTree)
-    //Removes the position data from the nodes
-    return JSON.stringify({"main":nodeTree});
+//Makes the canvas fit the container
+function canvasFit(){
+    //Makes the canvas visually fill the positioned parent
+    canvas.style.width ='100%';
+    canvas.style.height='100%';
+    //Sets the dimensions of the canvas to match the actual size    
+    canvas.width  = canvas.offsetWidth * 2;
+    canvas.height = canvas.offsetHeight * 2;
 }
 
-//------Logic------
-//Populates the node selector
-for(var i = 0; i < nodeTypes.length; i++){
-    //Adds the ip as an option to the stat selector
-    element = document.createElement("option");
-    element.text = nodeTypes[i];
-    document.getElementById('NodeType').add(element);
+//Handles drawing
+function drawCanvas(){
+    //Resets the screen
+    canvas.width = canvas.width;
+    let offset = Position(50, 50);
+    drawNode(programNode, offset);
+    getClosestNode(programNode, mousePos);
 }
+//Sets up the canvas
+canvasFit();
+//------Testing Code------
+let node_10 = Node(0);
+let node_11 = Node(0);
+let node_100 = Node(0);
+let node_101 = Node(0);
+node_10.children.push(node_100);
+node_10.children.push(node_101);
+programNode.children.push(node_10);
+programNode.children.push(node_11);
+//Generates the boundaries for all nodes
+generateBoundary(programNode);
 //Sets up mouse events
 canvas.addEventListener('mousemove', getMousePos);
-canvas.addEventListener('mousedown', getMouseDown);
-canvas.addEventListener('mouseup', getMouseUp);
 
-reDraw();
+
+//------Testing Code------
+// let rootNode = Node(0);
+// let node_10 = Node(0);
+// let node_11 = Node(0);
+// let node_100 = Node(0);
+// let node_101 = Node(0);
+// node_10.children.push(node_100);
+// node_10.children.push(node_101);
+// rootNode.children.push(node_10);
+// rootNode.children.push(node_11);
