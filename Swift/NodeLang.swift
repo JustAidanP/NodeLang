@@ -2,16 +2,16 @@
 //------The type should be able to be stored in a byte with the first 4 bits representing the section and the last 4 representing the specific type
 enum NodeType{
     //Variable Management, 0x0X
-    case CreateVar              //Children - GetVar(Optional), Name                 Purpose - Creates a variable with an empty link in a given scope(getVar), default uses the stack scope
-    case GetVar                 //Children - GetVar(Optional), Name                 Purpose - Gets the value linked to the variable from the given scope(getVar), default uses the stack scope
-    case DeleteVar              //Children - GetVar(Optional), Name                 Purpose - Deletes the value assigned with the variable from the given scope(getVar), default uses the stack scope
-    case GetLink                //Children - GetVar(Optional), Name                 Purpose - Returns the link of a variable as a Real_Int from the given scope(getVar), default uses the stack scope
-    case Link                   //Children - GetVar(Optional), Name, Real_Int       Purpose - Sets the link of the variable to the link provided from the given scope(getVar), default uses the stack scope
-    case Unlink                 //Children - GetVar(Optional), Name                 Purpose - Removes the link from a variable, not the value, the var is from the given scope(getVar), default uses the stack scope
-    case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given scope(getVar), default uses the stack scope
+    case CreateVar              //Children - GetVar(Optional), Name                 Purpose - Creates a variable with an empty link in a given object(getVar) or just the current variableScope
+    case GetVar                 //Children - GetVar(Optional), Name                 Purpose - Gets the value linked to the variable from the given object(getVar) or just the current variableScope
+    case DeleteVar              //Children - GetVar(Optional), Name                 Purpose - Deletes the value assigned with the variable from the given object(getVar) or just the current variableScope
+    case GetLink                //Children - GetVar(Optional), Name                 Purpose - Returns the link of a variable as a Real_Int from the given object(getVar) or just the current variableScope
+    case Link                   //Children - GetVar(Optional), Name, Real_Int       Purpose - Sets the link of the variable to the link provided from the given object(getVar) or just the current variableScope
+    case Unlink                 //Children - GetVar(Optional), Name                 Purpose - Removes the link from a variable, not the value, the var is from the given object(getVar) or just the current variableScope
+    case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given object(getVar) or just the current variableScope
     //Primitives, 0x1X
+    case NullType
     case Text                   //Operand  - Text
-    case Number                 //Operand  - Number                               --Depreciated
     case Real_Int               //Operand  - Int
     case Real_Float             //Operand  - Float
     case Boolean                //Operand  - Boolean
@@ -31,18 +31,21 @@ enum NodeType{
     case Logic_Or               //Children - Expression, Expression
     case Logic_Not              //Children - Expression, Expression
     //Jumps, 0x4X
-    case JumpTo                 //Children - RefNamespace, Label                    Purpose - Permenantly jumps to a (parent) execute block with a given label
-    case SubRoutine             //Children - RefNamespace, Label                    Purpose - Temporarily jumps to a (parent) execute block with a given label
+    case JumpTo                 //Children - RefNamespace, RefLabel                 Purpose - Permenantly jumps to a (parent) execute block with a given label
+    case SubRoutine             //Children - RefNamespace, RefLabel                 Purpose - Temporarily jumps to a (parent) execute block with a given label
     case Label                  //Children - Text                                   Purpose - Creates a new label in the process
     case RefLabel               //Children - Text                                   Purpose - Defines a location for a jump                                                                 Entry - Has none as it performs no edits to the registers
     case Recall                 //                                                  Purpose - Ends the current subroutine
     //Namespaces, 0x5X
-    case Namespace              //Children - Label, [Execute]                       Purpose - Sets up a namespace for execute blocks                                                        Entry - Has none as it should never be used under an execute
+    case Namespace              //Children - Text, [Execute]                        Purpose - Sets up a namespace for execute blocks                                                        Entry - Has none as it should never be used under an execute
     case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo                                               Entry - Has none as it performs no edits to the registers
     //Other, 0x6X
     case If                     //Children - Condition, Execute(False), Execute(True)
     case Execute                //Children - Any                                    Purpose - Execute a list of nodes                                                                       Entry - Has none as it performs no edits to the registers
     case Program                //Children - [Namespace]                            Purpose - Contains all nodes
+    case CastText               //Children - Expression                             Purpose - Casts a type to text
+    case CastReal_Int           //Children - Expression                             Purpose - Casts a type to Real_Int
+    case CastReal_Float         //Children - Expression                             Purpose - Casts a type to Real_Float
 }
 
 //------Classes------
@@ -50,8 +53,6 @@ enum NodeType{
 //Each node has a type and a child
 class Node{
     //------Variables------
-    //Stores an association of all node types to an index
-    static let nodeTypes:[NodeType] = [.CreateVar,.GetVar,.DeleteVar,.Text,.Number,.Boolean,.Oper_Add,.Oper_Sub,.Oper_Div,.Oper_Mult,.Logic_Is_Equal,.Logic_Is_Not_Equal,.Logic_Bigger,.Logic_Bigger_Equal,.Logic_Lesser,.Logic_Lesser_Equal,.Logic_And,.Logic_Or,.Logic_Not,.If,.JumpTo,.SubRoutine,.Assign,.Execute]
     //Defines the node's type
     //it is an Int using a byte format
     var type:UInt8
@@ -152,7 +153,6 @@ class Process{
     func execute(node:Node){
         //Removes the node from the node stack
         nodeStack.removeLast()
-
         //Switches through the Node's type
         switch node.type{
             //Handles variables
@@ -241,14 +241,16 @@ class Process{
                 //Assigns the second child's value to the first variable
                 varScope.assignValue(name: name, value: value)
             //Primitives
-            case 0x10: //Text 
+            case 0x11: //Text 
                 registerStack.append(StringType(value:node.operand))
-            case 0x11: //Real_Int
+            case 0x12: //Real_Int
                 registerStack.append(IntType(value:node.operand)) //Converts the number to IntType
-            case 0x12: //Real_Float
+            case 0x13: //Real_Float
                 registerStack.append(FloatType(value:node.operand as! Float)) //Converts the number to FloatType
-            case 0x13: //Boolean 
+            case 0x14: //Boolean 
                 registerStack.append(BoolType(value:node.operand))
+            case 0x15: //Object
+                registerStack.append(ObjectType(value:VariableScope()))
             //Operators
             case 0x20: //Oper_Add
                 //Extracts the values
@@ -406,12 +408,16 @@ class Process{
                         if ns.name == nsName{
                             //Finds the correct label
                             guard let label = ns.labels[labelName] else{return}
+                            //Sets this process to not clock
+                            self.shouldClock = false
                             //Creates a new process
                             self.processManager.createProcess(label:label, processParent:self)
                             return  //Exits
                         }}}
                 //Finds the correct label
                 guard let label = labels[labelName] else{return}
+                //Sets this process to not clock
+                self.shouldClock = false
                 //Creates a new process
                 self.processManager.createProcess(label:label, processParent:self)
                 return  //Exits
@@ -428,7 +434,7 @@ class Process{
                 if let parent = self.processParent{parent.shouldClock = true}           //------Change for Async
                 //Exits
                 return
-            //Handles conditional branching
+            //Handles other branching
             case 0x60: //If 
                 //------Pushes the branch node onto the nodeStack, increments the child index and adds a new index for the branch node
                 //Sets the child index to be past all the children
@@ -440,6 +446,38 @@ class Process{
                 indexStack.append(0)
                 //Adds the corresponding branch to the nodeStack
                 if condition{nodeStack.append(node.children[2])}else{nodeStack.append(node.children[1])}
+            case 0x63: //CastText
+                let value = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                if (value as? Int != nil){registerStack.append(IntType(value:String(value as! Int)))}
+                else if (value as? Float != nil){registerStack.append(IntType(value:String(value as! Float)))}
+                else if (value as? Bool != nil){registerStack.append(StringType(value: String((value as! Bool) ? 1 : 0)))}
+                else{registerStack.append(NullType())}
+            case 0x64: //CastReal_Int
+                let value = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the value is string
+                if (value as? String != nil){
+                    //Checks if the string can convert to an int
+                    if let cast = Int(value as! String){registerStack.append(IntType(value:cast))}
+                    else{registerStack.append(NullType())}
+                }//Checks if the value is a float
+                else if (value as? Float != nil){registerStack.append(IntType(value:Int(value as! Float)))}
+                //Checks if the value is a boolean
+                else if (value as? Bool != nil){registerStack.append(IntType(value: (value as! Bool) ? 1 : 0))}
+                //Otherwise null is return
+                else{registerStack.append(NullType())}
+            case 0x65: //CastReal_Float
+                let value = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
+                //Checks if the value is string
+                if (value as? String != nil){
+                    //Checks if the string can convert to an int
+                    if let cast = Float(value as! String){registerStack.append(FloatType(value:cast))}
+                    else{registerStack.append(NullType())}
+                }//Checks if the value is an Int
+                else if (value as? Int != nil){registerStack.append(FloatType(value:Float(value as! Int)))}
+                //Checks if the value is a boolean
+                else if (value as? Bool != nil){registerStack.append(FloatType(value: (value as! Bool) ? Float(1) : Float(0)))}
+                //Otherwise null is return
+                else{registerStack.append(NullType())}
             default: break
         }
         return
@@ -473,9 +511,9 @@ class ProcessManager{
                 //Makes sure that the node is a namespace
                 if node.type != 0x50{continue}                                                  //0x50 - Namespace
                 //Extracts the name of the child, text
-                let name = node.children[0].operand
+                let name = node.children[0].operand as! String
                 //Creates a new namespace with a placeholder nodestate
-                var ns = Namespace(name:name as! String, labels:[String:NodeState]())
+                var ns = Namespace(name:name, labels:[String:NodeState]())
                 //Searches through all the other children to identify labels
                 for i in 1..<node.children.count{
                     //Extracts the execute node
@@ -485,14 +523,20 @@ class ProcessManager{
                     //Creates a NodeState for the node with a starting index past the label
                     let nodeState = NodeState(nodeStack:[execute], indexStack:[0, 1])
                     
-                    //Adds the nodestate to the namespace as a label associated with the name
-                    ns.labels[execute.children[0].children[0].operand as! String] = nodeState
+                    //Extracts the name of the execute
+                    let labelName = execute.children[0].children[0].operand as! String
+                    //Detects if the execute is the entry point
+                    if name == "main" && labelName == "main"{
+                        createProcess(label:nodeState)
+                    }else{
+                        //Adds the nodestate to the namespace as a label associated with the name
+                        ns.labels[labelName] = nodeState
+                    }
                 }
                 //Adds the namespace to namespaces
                 self.namespaces.append(ns)
             }
         }
-        
     }
     //Creates a new process from a label
     //Arguments:    -Label              -NodeState
@@ -510,13 +554,15 @@ class ProcessManager{
     //Runs all processes indefinately
     func run(){
         while true{
+            //Stores whether a process got clocked
+            var processClocked = false
             //Runs every process
             for i in 0..<processes.count{
                 let process = processes[i]
                 if process.shouldKill{processes.remove(at:i)}
-                else if process.shouldClock{process.clock(); continue}
-                return
+                else if process.shouldClock{process.clock(); processClocked = true; continue}
             }
+            if !processClocked{return}
         }
     }
     //Runs for x number of clock cycles, a single clock sends one clock pulse to every process

@@ -1,9 +1,77 @@
 <html>
     <head>
+        <link rel="stylesheet" type="text/css" href="style.css">
         <script defer src="script.js"></script>
     </head>
-    <body>
+    <body style="height: 100%; overflow: hidden;">
+        <!-- Provides the ability to select a node -->
+        <div class="sidebar" id="selectorPanel">
+            <div class="seperator">Variable Management</div>
+            <div class="node" id ="0x00" onclick="addButtonSelector(0x00);">CreateVar</div>
+            <div class="node" id ="0x01" onclick="addButtonSelector(0x01);">GetVar</div>
+            <div class="node" id ="0x02" onclick="addButtonSelector(0x02);">DeleteVar</div>
+            <div class="node" id ="0x03" onclick="addButtonSelector(0x03);">GetLink</div>
+            <div class="node" id ="0x04" onclick="addButtonSelector(0x04);">Link</div>
+            <div class="node" id ="0x05" onclick="addButtonSelector(0x05);">Unlink</div>
+            <div class="node" id ="0x06" onclick="addButtonSelector(0x06);">Assign</div>
+            <div class="seperator">Primitives</div>
+            <div class="node" id ="0x10" onclick="addButtonSelector(0x10);">Null</div>
+            <div class="node" id ="0x11" onclick="addButtonSelector(0x11);">Text</div>
+            <div class="node" id ="0x12" onclick="addButtonSelector(0x12);">Real_Int</div>
+            <div class="node" id ="0x13" onclick="addButtonSelector(0x13);">Real_Float</div>
+            <div class="node" id ="0x14" onclick="addButtonSelector(0x14);">Boolean</div>
+            <div class="node" id ="0x14" onclick="addButtonSelector(0x15);">Object</div>
+            <div class="seperator">Operators</div>
+            <div class="node" id ="0x20" onclick="addButtonSelector(0x20);">Oper_Add</div>
+            <div class="node" id ="0x21" onclick="addButtonSelector(0x21);">Oper_Sub</div>
+            <div class="node" id ="0x22" onclick="addButtonSelector(0x22);">Oper_Mult</div>
+            <div class="node" id ="0x23" onclick="addButtonSelector(0x23);">Oper_Div</div>
+            <div class="seperator">Logical Operators</div>
+            <div class="node" id ="0x30" onclick="addButtonSelector(0x30);">Logic_Is_Equal</div>
+            <div class="node" id ="0x31" onclick="addButtonSelector(0x31);">Logic_Is_Not_Equal</div>
+            <div class="node" id ="0x32" onclick="addButtonSelector(0x32);">Logic_Bigger</div>
+            <div class="node" id ="0x33" onclick="addButtonSelector(0x33);">Logic_Bigger_Equal</div>
+            <div class="node" id ="0x34" onclick="addButtonSelector(0x34);">Logic_Lesser</div>
+            <div class="node" id ="0x35" onclick="addButtonSelector(0x35);">Logic_Lesser_Equal</div>
+            <div class="node" id ="0x36" onclick="addButtonSelector(0x36);">Logic_And</div>
+            <div class="node" id ="0x37" onclick="addButtonSelector(0x37);">Logic_Or</div>
+            <div class="node" id ="0x38" onclick="addButtonSelector(0x38);">Logic_Not</div>
+            <div class="seperator">Jumps</div>
+            <div class="node" id ="0x40" onclick="addButtonSelector(0x40);">JumpTo</div>
+            <div class="node" id ="0x41" onclick="addButtonSelector(0x41);">SubRoutine</div>
+            <div class="node" id ="0x42" onclick="addButtonSelector(0x42);">Label</div>
+            <div class="node" id ="0x43" onclick="addButtonSelector(0x43);">RefLabel</div>
+            <div class="node" id ="0x44" onclick="addButtonSelector(0x44);">Recall</div>
+            <div class="seperator">Namespaces</div>
+            <div class="node" id ="0x50" onclick="addButtonSelector(0x50);">Namespace</div>
+            <div class="node" id ="0x51" onclick="addButtonSelector(0x51);">RefNamespace</div>
+            <div class="seperator">Other</div>
+            <div class="node" id ="0x60" onclick="addButtonSelector(0x60);">If</div>
+            <div class="node" id ="0x61" onclick="addButtonSelector(0x61);">Execute</div>
+            <div class="node" id ="0x62" onclick="addButtonSelector(0x62);">Program</div>
+            <div class="node" id ="0x63" onclick="addButtonSelector(0x63);">CastText</div>
+            <div class="node" id ="0x64" onclick="addButtonSelector(0x64);">CastReal_Int</div>
+            <div class="node" id ="0x65" onclick="addButtonSelector(0x65);">CastReal_Float</div>
+        </div>
+        <!-- Shows the canvas -->
+        <div id="view">
             <canvas id="byteCanvas" width="200" height="100" style="border:1px solid #000000;">
             </canvas>
+        </div>
+        <!-- Stores the info panel -->
+        <div class="sidebar" id="infoPanel">
+            <button class="block" id="duplicate">&#10133</button>
+            <button class="block" id="bin" onclick="deleteHighlighted();">&#128465</button>
+            <div class="seperator">Type</div>
+            <div class="block" id="TypeName"></div>
+            <div class="block" id="TypeOpcode"></div>
+
+            <div class="seperator">Operand</div>
+            <div id="operand">
+                <textarea class="block" id="OperandText" onkeyup="highlightedNode.operand=this.value;"></textarea>
+                <input type="number" class="block" id="OperandReal_Int" onkeyup="highlightedNode.operand=parseInt(this.value);"></input>
+                <input type="number" class="block" id="OperandReal_Float" onkeyup="highlightedNode.operand=parseFloat(this.value);"></input>
+            </div>
+        </div>
     </body>
 </html>

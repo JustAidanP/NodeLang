@@ -1,0 +1,70 @@
+/* Sidebar */
+.sidebar{
+    background-color: #0394fc;
+    position: fixed;
+    z-index: 1;
+    height: 100%;
+    top: 0;
+    width: 170px;
+    overflow: auto;
+}
+
+/* Defines specific styling for the selector panel */
+#selectorPanel{
+    left: 0;
+}
+
+/* Defines the styling for each selector element */
+#selectorPanel .node{
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    background-color: lightcyan;
+    border: 2px solid lightcyan;
+    border-radius: 5px;
+    padding: 2px;
+    margin: 5px;
+}
+#selectorPanel .node:hover{background-color: cyan; cursor: pointer;}
+#selectorPanel .node:active{background-color: lightskyblue; cursor: pointer;}
+
+/* Defines the styling for the seperators */
+.sidebar .seperator{
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    background-color: cyan;
+    border-top: 2px solid cyan;
+    border-radius: 3px;
+    padding: 2px;
+    margin: 5px 1px 5px 1px;
+}
+
+/* Defines specific styling for the info panel */
+#infoPanel{
+    right: 0;
+    width: 225px;
+    overflow: hidden;
+}
+
+#infoPanel .block{
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    background-color: lightgreen;
+    border: 2px solid lightgreen;
+    border-radius: 5px;
+    padding: 2px;
+    margin: 5px;
+}
+
+/* Defines styling for the top buttons on the info panel */
+#infoPanel button{
+    left: 5px;
+}
+
+/* Defines the styling for the canvas view */
+#byteCanvas{
+    position: fixed;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    left: 170px;
+    right: 200px;
+    top: 0;
+    /* right: 0; */
+}
