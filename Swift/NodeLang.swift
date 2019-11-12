@@ -11,10 +11,13 @@ enum NodeType{
     case Assign                 //Children - GetVar(Optional), Name, Expression     Purpose - Assigns a value to the variable int the given object(getVar) or just the current variableScope
     //Primitives, 0x1X
     case NullType
-    case Text                   //Operand  - Text
+    case Text                   //Operand  - Text                                   Proposal - Internally stored as a byte array
     case Real_Int               //Operand  - Int
     case Real_Float             //Operand  - Float
     case Boolean                //Operand  - Boolean
+    case Object
+    case Byte                   //Proposal - An 8 bit value that can be stored
+    case ByteArray              //Proposal - A collection of bytes, Text is internally stored as a ByteArray
     //Operators, 0x2X
     case Oper_Add               //Children - Expression, Expression
     case Oper_Sub               //Children - Expression, Expression

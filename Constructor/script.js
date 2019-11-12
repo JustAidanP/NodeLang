@@ -711,18 +711,22 @@ function exportObject(node){
     //Returns the object
     return nodeTree;
 }
+//Imports a node tree for a js object
+//Arguments:    -The js object to run an import on
+//Returns:      -A node
+function importObject(node){
+    //Stores the node tree for the node
+    let nodeTree = Node(node.type);
+    nodeTree.operand = node.operand;
+    // let nodeTree = {type:node.type, operand:node.operand, children:[]}
+    //Adds the export of every child to the node tree
+    for (var i=0; i<node.children.length; i++) nodeTree.children.push(importObject(node.children[i]));
+    //Returns the object
+    return nodeTree;
+}
 
 //Sets up the canvas
 canvasFit();
-//------Testing Code------
-// let node_10 = Node(1);
-// let node_11 = Node(2);
-// let node_100 = Node(3);
-// let node_101 = Node(4);
-// node_10.children.push(node_100);
-// node_10.children.push(node_101);
-// programNode.children.push(node_10);
-// programNode.children.push(node_11);
 //Generates the boundaries for all nodes
 generateBoundary(programNode);
 //Draws the canvas
@@ -732,15 +736,3 @@ canvas.addEventListener('mousemove', getMousePos);
 canvas.addEventListener('mousedown', onMouseDown);
 canvas.addEventListener('mouseup', onMouseRelease);
 canvas.addEventListener('wheel', onScrollWheel);
-
-
-//------Testing Code------
-// let rootNode = Node(0);
-// let node_10 = Node(0);
-// let node_11 = Node(0);
-// let node_100 = Node(0);
-// let node_101 = Node(0);
-// node_10.children.push(node_100);
-// node_10.children.push(node_101);
-// rootNode.children.push(node_10);
-// rootNode.children.push(node_11);
