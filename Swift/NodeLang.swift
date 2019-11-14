@@ -16,6 +16,7 @@ enum NodeType{
     case Real_Float             //Operand  - Float
     case Boolean                //Operand  - Boolean
     case Object
+    case Array                  //Proposal - Stores an array of links to the variable container
     case Byte                   //Proposal - An 8 bit value that can be stored
     case ByteArray              //Proposal - A collection of bytes, Text is internally stored as a ByteArray
     //Operators, 0x2X
@@ -43,7 +44,7 @@ enum NodeType{
     case Namespace              //Children - Text, [Execute]                        Purpose - Sets up a namespace for execute blocks                                                        Entry - Has none as it should never be used under an execute
     case RefNamespace           //Children - Text                                   Purpose - References a namespace for SubRoutine or JumpTo                                               Entry - Has none as it performs no edits to the registers
     //Other, 0x6X
-    case If                     //Children - Condition, Execute(False), Execute(True)
+    case If                     //Children - Condition, Execute(False), Execute(True)                                                                                                       Entry - Has none as the execution is in node preprocess
     case Execute                //Children - Any                                    Purpose - Execute a list of nodes                                                                       Entry - Has none as it performs no edits to the registers
     case Program                //Children - [Namespace]                            Purpose - Contains all nodes
     case CastText               //Children - Expression                             Purpose - Casts a type to text
@@ -79,8 +80,21 @@ class Node{
     //Arguments:    -The process                        -Ref Process
     //Returns:      -Whether processing has finished    -Bool
     func clockPrerocess(process:Process)->Bool{
-        //Makes sure that only the first child of an if node is ran
-        if self.type == 0x60 && process.indexStack.last! >= 1{return true}                              //0x60 - If
+        //Makes sure that only the first child of an if node is ran and then it performs the if execution
+        if self.type == 0x60 && process.indexStack.last! == 1{                                                                                  //0x60 - If
+            //Performs the if execution
+            //------Pushes the branch node onto the nodeStack, increments the child index and adds a new index for the branch node
+            //Sets the child index to be past all the children
+            process.indexStack[process.indexStack.count - 1] = self.children.count + 1
+
+            //Evaluates the condition
+            let condition = process.registerStack.last!.value as! Bool; process.registerStack.removeLast() //Extracts the value and removes it from the stack
+            //Adds an index of zero to the indexStack for the branch node
+            process.indexStack.append(0)
+            //Adds the corresponding branch to the nodeStack
+            if condition{process.nodeStack.append(self.children[2])}else{process.nodeStack.append(self.children[1])}
+            return false
+        }
         //Returns true if there are no children or preprocessing has finished
         if self.children.count == 0 || process.indexStack.last! >= self.children.count{return true}
         //Adds the child to the nodeStack of the process
@@ -438,21 +452,10 @@ class Process{
                 //Exits
                 return
             //Handles other branching
-            case 0x60: //If 
-                //------Pushes the branch node onto the nodeStack, increments the child index and adds a new index for the branch node
-                //Sets the child index to be past all the children
-                indexStack[indexStack.count - 1] = node.children.count + 1
-
-                //Evaluates the condition
-                let condition = registerStack.last!.value as! Bool; registerStack.removeLast() //Extracts the value and removes it from the stack
-                //Adds an index of zero to the indexStack for the branch node
-                indexStack.append(0)
-                //Adds the corresponding branch to the nodeStack
-                if condition{nodeStack.append(node.children[2])}else{nodeStack.append(node.children[1])}
             case 0x63: //CastText
                 let value = registerStack.last!.value; registerStack.removeLast() //Extracts the value and removes it from the stack
-                if (value as? Int != nil){registerStack.append(IntType(value:String(value as! Int)))}
-                else if (value as? Float != nil){registerStack.append(IntType(value:String(value as! Float)))}
+                if (value as? Int != nil){registerStack.append(StringType(value:String(value as! Int)))}
+                else if (value as? Float != nil){registerStack.append(StringType(value:String(value as! Float)))}
                 else if (value as? Bool != nil){registerStack.append(StringType(value: String((value as! Bool) ? 1 : 0)))}
                 else{registerStack.append(NullType())}
             case 0x64: //CastReal_Int
@@ -561,6 +564,7 @@ class ProcessManager{
             var processClocked = false
             //Runs every process
             for i in 0..<processes.count{
+                // print(p)
                 let process = processes[i]
                 if process.shouldKill{processes.remove(at:i)}
                 else if process.shouldClock{process.clock(); processClocked = true; continue}
