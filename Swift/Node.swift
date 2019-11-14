@@ -20,10 +20,16 @@ enum NodeType{
     case Byte                   //Operand  - Int
     case ByteArray              //Operand  - Int                                    Purpose - Stores a collection of bytes, the operand defines the number of bytes
     //Operators, 0x2X
-    case Oper_Add               //Children - Expression, Expression
-    case Oper_Sub               //Children - Expression, Expression
-    case Oper_Mult              //Children - Expression, Expression
-    case Oper_Div               //Children - Expression, Expression
+    case Oper_Add               //Children - Int Float, Int Float
+    case Oper_Sub               //Children - Int Float, Int Float
+    case Oper_Mult              //Children - Int Float, Int Float
+    case Oper_Div               //Children - Int Float, Int Float
+    case Oper_Bit_Left_Shift    //Children - Int Byte, Int ?
+    case Oper_Bit_Right_Shift   //Children - Int Byte, Int ?
+    case Oper_Bit_And           //Children - Int Byte, Int Byte
+    case Oper_Bit_Or            //Children - Int Byte, Int Byte
+    case Oper_Bit_Xor           //Children - Int Byte, Int Byte
+    case Oper_Bit_Not           //Children - Int Byte, Int Byte
     //Logic Operators, 0x3X
     case Logic_Is_Equal         //Children - Expression, Expression
     case Logic_Is_Not_Equal     //Children - Expression, Expression
@@ -31,9 +37,9 @@ enum NodeType{
     case Logic_Bigger_Equal     //Children - Expression, Expression
     case Logic_Lesser           //Children - Expression, Expression
     case Logic_Lesser_Equal     //Children - Expression, Expression
-    case Logic_And              //Children - Expression, Expression
-    case Logic_Or               //Children - Expression, Expression
-    case Logic_Not              //Children - Expression, Expression
+    case Logic_And              //Children - Expression, Expression                 //Proposal - Move to Operators
+    case Logic_Or               //Children - Expression, Expression                 //Proposal - Move to Operators
+    case Logic_Not              //Children - Expression, Expression                 //Proposal - Move to Operators
     //Jumps, 0x4X
     case JumpTo                 //Children - RefNamespace, RefLabel                 Purpose - Permenantly jumps to a (parent) execute block with a given label
     case SubRoutine             //Children - RefNamespace, RefLabel                 Purpose - Temporarily jumps to a (parent) execute block with a given label
