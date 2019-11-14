@@ -1,2 +1,2 @@
 all:
-	swiftc NodeLang.swift jsonInterpreter.swift VariableManager.swift Namespaces.swift main.swift -o NodeLang
+	swiftc Node.swift Process.swift jsonInterpreter.swift VariableManager.swift Namespaces.swift main.swift -o NodeLang
