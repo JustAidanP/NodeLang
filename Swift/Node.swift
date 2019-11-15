@@ -37,9 +37,9 @@ enum NodeType{
     case Logic_Bigger_Equal     //Children - Expression, Expression
     case Logic_Lesser           //Children - Expression, Expression
     case Logic_Lesser_Equal     //Children - Expression, Expression
-    case Logic_And              //Children - Expression, Expression                 //Proposal - Move to Operators
-    case Logic_Or               //Children - Expression, Expression                 //Proposal - Move to Operators
-    case Logic_Not              //Children - Expression, Expression                 //Proposal - Move to Operators
+    case Logic_And              //Children - Expression, Expression
+    case Logic_Or               //Children - Expression, Expression
+    case Logic_Not              //Children - Expression, Expression
     //Jumps, 0x4X
     case JumpTo                 //Children - RefNamespace, RefLabel                 Purpose - Permenantly jumps to a (parent) execute block with a given label
     case SubRoutine             //Children - RefNamespace, RefLabel                 Purpose - Temporarily jumps to a (parent) execute block with a given label
